@@ -208,307 +208,281 @@
     </footer>
 
     <script>
-      // ========= Config =========
-      const META = {
-        url: document.querySelector('meta[name="supabase-url"]').getAttribute('content'),
-        key: document.querySelector('meta[name="supabase-anon-key"]').getAttribute('content')
-      };
-      const SUPABASE_URL = (window.ENV && window.ENV.SUPABASE_URL) || META.url;
-      const SUPABASE_ANON_KEY = (window.ENV && window.ENV.SUPABASE_ANON_KEY) || META.key;
+// ======== ES5-Compatible Init (no arrow functions, no optional chaining) ========
+(function(){
+  // ---- Config ----
+  var META_URL_EL = document.querySelector('meta[name="supabase-url"]');
+  var META_KEY_EL = document.querySelector('meta[name="supabase-anon-key"]');
+  var SUPABASE_URL = (window.ENV && window.ENV.SUPABASE_URL) || (META_URL_EL ? META_URL_EL.getAttribute('content') : '');
+  var SUPABASE_ANON_KEY = (window.ENV && window.ENV.SUPABASE_ANON_KEY) || (META_KEY_EL ? META_KEY_EL.getAttribute('content') : '');
+  var BUCKET = 'contact-images';
+  var CONTACTS_TABLE = 'contacts';
+  var MATERIALS_CSV = '/data/materiali_database.csv';
 
-      const BUCKET = 'contact-images';
-      const CONTACTS_TABLE = 'contacts';
-      const MATERIALS_CSV = '/data/materiali_database.csv';
+  // ---- Helpers ----
+  function $(sel){ return document.querySelector(sel); }
+  function setText(id, t){ var el=document.getElementById(id); if(el){ el.textContent = t; } }
+  var UI = {
+    showAuth: function(){ var a=$('#auth-section'), b=$('#app-section'); if(a) a.style.display='grid'; if(b) b.style.display='none'; var l=$('#btn-login-header'); if(l) l.style.display=''; var o=$('#btn-logout'); if(o) o.style.display='none'; },
+    showApp: function(){ var a=$('#auth-section'), b=$('#app-section'); if(a) a.style.display='none'; if(b) b.style.display='block'; var l=$('#btn-login-header'); if(l) l.style.display='none'; var o=$('#btn-logout'); if(o) o.style.display=''; }
+  };
 
-      // ========= Helpers =========
-      const $ = (sel) => document.querySelector(sel);
-      const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-      const UI = {
-        showAuth() { $('#auth-section').style.display = 'grid'; $('#app-section').style.display = 'none'; $('#btn-login-header').style.display=''; $('#btn-logout').style.display='none'; },
-        showApp()  { $('#auth-section').style.display = 'none'; $('#app-section').style.display = 'block'; $('#btn-login-header').style.display='none'; $('#btn-logout').style.display=''; }
-      };
+  function ensureStatusRow(){
+    if (!document.getElementById('config-status')){
+      var p = document.createElement('div');
+      p.id = 'config-status';
+      p.className = 'mt-2 text-xs';
+      var anchor = document.getElementById('auth-message');
+      if (anchor && anchor.parentNode){ anchor.parentNode.insertBefore(p, anchor.nextSibling); }
+    }
+  }
 
-      // Try to ensure the Supabase SDK is present (fallback loader if CDN blocked)
-      async function ensureSupabaseSDK() {
-        if (window.supabase) return true;
-        // Try primary CDN (jsDelivr)
-        const tryLoad = (src) => new Promise((resolve) => {
-          const s = document.createElement('script');
-          s.src = src;
-          s.defer = true;
-          s.onload = () => resolve(!!window.supabase);
-          s.onerror = () => resolve(false);
-          document.head.appendChild(s);
-        });
-        let ok = await tryLoad('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js');
-        if (!ok) ok = await tryLoad('https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js');
-        return ok;
-      });
+  function ensureSupabaseSDK(callback){
+    if (window.supabase) return callback(true);
+    function tryLoad(src, cb){
+      var s = document.createElement('script'); s.src = src; s.defer = true; s.onload = function(){ cb(!!window.supabase); }; s.onerror = function(){ cb(false); }; document.head.appendChild(s);
+    }
+    tryLoad('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js', function(ok){
+      if (ok) return callback(true);
+      tryLoad('https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js', function(ok2){ callback(!!ok2); });
+    });
+  }
+
+  var supabaseClient = null;
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var yEl = document.getElementById('year'); if (yEl) yEl.textContent = new Date().getFullYear();
+    ensureStatusRow();
+
+    ensureSupabaseSDK(function(sdkOk){
+      var urlOk = /^https?:\/\//.test(SUPABASE_URL);
+      var keyOk = !!SUPABASE_ANON_KEY;
+      var host = '(vuoto)';
+      try { host = (new URL(SUPABASE_URL)).host || host; } catch(e) {}
+      setText('config-status', 'Stato — SDK: '+(sdkOk?'OK':'KO')+' • URL: '+(urlOk?host:'non valido')+' • KEY: '+(keyOk? (SUPABASE_ANON_KEY.slice(0,8)+'… ('+SUPABASE_ANON_KEY.length+' chars)') : '(vuota)'));
+      var cs = document.getElementById('config-status'); if (cs) cs.style.color = (sdkOk && urlOk && keyOk) ? '#0a0' : '#a00';
+
+      if (!(sdkOk && urlOk && keyOk)){
+        UI.showAuth();
+        if (!sdkOk) setText('auth-message','Errore: libreria di accesso non caricata (CDN bloccato?).');
+        else setText('auth-message','Configurazione mancante o non valida: controlla URL e chiave di Supabase.');
+        mountHandlers();
+        return;
       }
 
-      // ========= Supabase init & diagnostics =========
-      let supabaseClient;
-      document.addEventListener('DOMContentLoaded', async () => {
-        const yearEl = document.getElementById('year');
-        if (yearEl) yearEl.textContent = new Date().getFullYear();
-        const msg = (t)=>{ const p=document.getElementById('auth-message'); if(p) p.textContent=t; };
-        const status = (sdk,url,key)=>{
-          const el = document.getElementById('config-status');
-          if (!el) return;
-          let host = '(vuoto)';
-          try { host = new URL(url).host || host; } catch(e) {}
-          const keyMask = key ? (key.slice(0,8) + '… (' + key.length + ' chars)') : '(vuota)';
-          const ok = sdk && /^https?:\/\//.test(url) && !!key;
-          el.textContent = `Stato — SDK: ${sdk?'OK':'KO'} • URL: ${/^https?:\/\//.test(url)?host:'non valido'} • KEY: ${keyMask}`;
-          el.style.color = ok ? '#0a0' : '#a00';
-        };
+      try {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      } catch(e){
+        console.error('createClient error', e);
+        setText('auth-message','Configurazione non valida: impossibile creare il client.');
+        UI.showAuth();
+        mountHandlers();
+        return;
+      }
 
-        // Ensure SDK
-        const sdkOk = await ensureSupabaseSDK();
-
-        const url = SUPABASE_URL;
-        const key = SUPABASE_ANON_KEY;
-        status(sdkOk, url, key);
-
-        if (!sdkOk) {
-          console.error('Supabase SDK non disponibile');
-          msg('Errore: libreria di accesso non caricata. Controlla la connessione o i blocchi del browser.');
-        }
-
-        const validConfig = sdkOk && /^https?:\/\//.test(url) && !!key;
-
-        if (validConfig) {
-          try {
-            supabaseClient = window.supabase.createClient(url, key);
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (session) { UI.showApp(); App.initAfterLogin(session); } else { UI.showAuth(); }
-            supabaseClient.auth.onAuthStateChange(async (event, session) => {
-              if (event === 'PASSWORD_RECOVERY') {
-                const resetBox = document.getElementById('reset-section'); if (resetBox) resetBox.classList.remove('hidden');
-                const rm = document.getElementById('reset-message'); if (rm) rm.textContent = 'Inserisci la nuova password e conferma.';
-                UI.showAuth();
-              } else if (session) {
-                const resetBox = document.getElementById('reset-section'); if (resetBox) resetBox.classList.add('hidden');
-                UI.showApp(); App.initAfterLogin(session);
-              } else {
-                UI.showAuth();
-              }
-            });
-          } catch (e) {
-            console.error('Init Supabase failed:', e);
-            msg('Configurazione non valida o servizio non raggiungibile.');
-            UI.showAuth();
-          }
-        } else {
-          UI.showAuth();
-          msg('Configurazione mancante o non valida: controlla URL e chiave di Supabase.');
-        }
-
-        Auth.mount();
-        App.mount();
+      supabaseClient.auth.getSession().then(function(res){
+        var session = res && res.data ? res.data.session : null;
+        if (session) { UI.showApp(); App.initAfterLogin(session); } else { UI.showAuth(); }
       });
 
-      // ========= Auth =========
-      const Auth = {
-        mount() {
-          const form = $('#auth-form'); if (form) form.addEventListener('submit', Auth.login);
-          const reg = $('#btn-register'); if (reg) reg.addEventListener('click', Auth.register);
-          const forgot = $('#btn-forgot'); if (forgot) forgot.addEventListener('click', Auth.forgot);
-          const setBtn = $('#btn-set-password'); if (setBtn) setBtn.addEventListener('click', Auth.setNewPassword);
-        },
-        async login(e) {
-          e.preventDefault();
-          const M = (id)=>document.getElementById(id);
-          M('auth-message').textContent = 'Accesso in corso…';
-          if (!window.supabaseClient) { M('auth-message').textContent = 'Impossibile accedere: configurazione Supabase mancante.'; return; }
-          const email = $('#auth-email').value.trim();
-          const password = $('#auth-password').value;
-          const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-          M('auth-message').textContent = error ? ('Errore: ' + error.message) : '';
-        },
-        async register() {
-          const M = (id)=>document.getElementById(id);
-          M('auth-message').textContent = 'Registrazione in corso…';
-          if (!window.supabaseClient) { M('auth-message').textContent = 'Impossibile registrarsi: configurazione Supabase mancante.'; return; }
-          const email = $('#auth-email').value.trim();
-          const password = $('#auth-password').value;
-          const { error } = await supabaseClient.auth.signUp({ email, password });
-          M('auth-message').textContent = error ? ('Errore: ' + error.message) : 'Registrazione effettuata. Ora accedi.';
-        },
-        async forgot() {
-          const M = (id)=>document.getElementById(id);
-          const email = $('#auth-email').value.trim();
-          if (!email) { M('auth-message').textContent = 'Inserisci la tua email nel campo sopra e poi clicca "Password dimenticata?"'; return; }
-          if (!window.supabaseClient) { M('auth-message').textContent = 'Impossibile inviare reset: configurazione Supabase mancante.'; return; }
-          const redirectTo = window.location.origin + '/';
-          const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
-          M('auth-message').textContent = error ? ('Errore reset: ' + error.message) : 'Ti abbiamo inviato un link per reimpostare la password.';
-        },
-        async setNewPassword() {
-          const pass1 = $('#reset-password').value;
-          const pass2 = $('#reset-password2').value;
-          const R = (t)=>{ const el=$('#reset-message'); if(el) el.textContent=t; };
-          if (!pass1 || pass1 !== pass2) { R('Le password non coincidono.'); return; }
-          if (!window.supabaseClient) { R('Configurazione mancante.'); return; }
-          const { error } = await supabaseClient.auth.updateUser({ password: pass1 });
-          if (error) { R('Errore: ' + error.message); return; }
-          R('Password aggiornata! Ora puoi accedere.');
-          setTimeout(()=>{ const resetBox = document.getElementById('reset-section'); if (resetBox) resetBox.classList.add('hidden'); }, 1200);
+      supabaseClient.auth.onAuthStateChange(function(event, session){
+        if (event === 'PASSWORD_RECOVERY'){
+          var box = document.getElementById('reset-section'); if (box) box.classList.remove('hidden');
+          setText('reset-message','Inserisci la nuova password e conferma.');
+          UI.showAuth();
+        } else if (session){
+          var box2 = document.getElementById('reset-section'); if (box2) box2.classList.add('hidden');
+          UI.showApp(); App.initAfterLogin(session);
+        } else {
+          UI.showAuth();
         }
-      };
+      });
 
-      // ========= App (after login) =========
-      const App = {
-        didInit: false,
-        async initAfterLogin(session) {
-          if (this.didInit) return;
-          this.didInit = true;
-          await Materials.load();
-          Materials.mirrorFiltersIntoContactForm();
-        },
-        mount() {
-          const rf = $('#f-regione'); if (rf) rf.addEventListener('change', Materials.renderFiltered.bind(Materials));
-          const pf = $('#f-polimero'); if (pf) pf.addEventListener('change', Materials.renderFiltered.bind(Materials));
-          const p2 = $('#f-processo'); if (p2) p2.addEventListener('change', Materials.renderFiltered.bind(Materials));
-          const cf = $('#contact-form'); if (cf) cf.addEventListener('submit', Contacts.handleSubmit);
-        }
-      };
+      mountHandlers();
+    });
+  });
 
-      // ========= Materials DB =========
-      const Materials = {
-        raw: [],
-        unique(field) {
-          const vals = new Set(this.raw.map(r => (r[field] || '').trim()).filter(Boolean));
-          return ['Tutte', ...Array.from(vals).sort((a,b)=>a.localeCompare(b))];
-        },
-        async load() {
-          try {
-            const res = await fetch(MATERIALS_CSV, { cache: 'no-store' });
-            const text = await res.text();
-            const parsed = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: false });
-            this.raw = parsed.data.map(r => ({
+  function mountHandlers(){
+    var form = $('#auth-form'); if (form) form.addEventListener('submit', Auth.login);
+    var reg = $('#btn-register'); if (reg) reg.addEventListener('click', Auth.register);
+    var forgot = $('#btn-forgot'); if (forgot) forgot.addEventListener('click', Auth.forgot);
+    var setBtn = $('#btn-set-password'); if (setBtn) setBtn.addEventListener('click', Auth.setNewPassword);
+    var rf = $('#f-regione'); if (rf) rf.addEventListener('change', function(){ Materials.renderFiltered(); });
+    var pf = $('#f-polimero'); if (pf) pf.addEventListener('change', function(){ Materials.renderFiltered(); });
+    var pr = $('#f-processo'); if (pr) pr.addEventListener('change', function(){ Materials.renderFiltered(); });
+    var cf = $('#contact-form'); if (cf) cf.addEventListener('submit', Contacts.handleSubmit);
+  }
+
+  // ---- Auth ----
+  var Auth = {
+    login: function(e){
+      e.preventDefault();
+      setText('auth-message','Accesso in corso…');
+      if (!supabaseClient){ setText('auth-message','Impossibile accedere: configurazione Supabase mancante.'); return; }
+      var email = ($('#auth-email')||{}).value || '';
+      var password = ($('#auth-password')||{}).value || '';
+      supabaseClient.auth.signInWithPassword({ email: email.trim(), password: password })
+        .then(function(res){ setText('auth-message', res.error ? ('Errore: '+res.error.message) : ''); });
+    },
+    register: function(){
+      setText('auth-message','Registrazione in corso…');
+      if (!supabaseClient){ setText('auth-message','Impossibile registrarsi: configurazione Supabase mancante.'); return; }
+      var email = ($('#auth-email')||{}).value || '';
+      var password = ($('#auth-password')||{}).value || '';
+      supabaseClient.auth.signUp({ email: email.trim(), password: password })
+        .then(function(res){ setText('auth-message', res.error ? ('Errore: '+res.error.message) : 'Registrazione effettuata. Ora accedi.'); });
+    },
+    forgot: function(){
+      var email = ($('#auth-email')||{}).value || '';
+      if (!email){ setText('auth-message','Inserisci la tua email nel campo sopra e poi clicca "Password dimenticata?"'); return; }
+      if (!supabaseClient){ setText('auth-message','Impossibile inviare reset: configurazione Supabase mancante.'); return; }
+      var redirectTo = window.location.origin + '/';
+      supabaseClient.auth.resetPasswordForEmail(email.trim(), { redirectTo: redirectTo })
+        .then(function(res){ setText('auth-message', res.error ? ('Errore reset: '+res.error.message) : 'Ti abbiamo inviato un link per reimpostare la password.'); });
+    },
+    setNewPassword: function(){
+      var pass1 = ($('#reset-password')||{}).value || '';
+      var pass2 = ($('#reset-password2')||{}).value || '';
+      if (!pass1 || pass1 !== pass2){ setText('reset-message','Le password non coincidono.'); return; }
+      if (!supabaseClient){ setText('reset-message','Configurazione mancante.'); return; }
+      supabaseClient.auth.updateUser({ password: pass1 })
+        .then(function(res){ if (res.error){ setText('reset-message','Errore: '+res.error.message); return; } setText('reset-message','Password aggiornata! Ora puoi accedere.'); setTimeout(function(){ var box=document.getElementById('reset-section'); if (box) box.classList.add('hidden'); }, 1200); });
+    }
+  };
+
+  // ---- Materials ----
+  var Materials = {
+    raw: [],
+    unique: function(field){
+      var set = {};
+      for (var i=0;i<this.raw.length;i++){ var v = (this.raw[i][field]||'').trim(); if (v) set[v]=true; }
+      var arr=['Tutte']; for (var k in set){ if (set.hasOwnProperty(k)) arr.push(k); }
+      arr.sort(function(a,b){ return a.localeCompare(b); }); return arr;
+    },
+    load: function(){
+      return fetch(MATERIALS_CSV, { cache: 'no-store' })
+        .then(function(res){ return res.text(); })
+        .then(function(text){
+          var parsed = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: false });
+          Materials.raw = (parsed.data||[]).map(function(r){
+            return {
               Regione: r.Regione || r.regione || r.Region || '',
               Polimero: r.Polimero || r.polimero || r.Polymer || '',
               Processo: r.Processo || r.processo || r.Process || '',
               Materiale: r.Materiale || r.materiale || r.Material || '',
               Note: r.Note || r.note || ''
-            }));
-            Materials.populateSelect('#f-regione', this.unique('Regione'));
-            Materials.populateSelect('#f-polimero', this.unique('Polimero'));
-            Materials.populateSelect('#f-processo', this.unique('Processo'));
-            Materials.renderFiltered();
-            Materials.populateSelect('#c-regione', this.unique('Regione'));
-            Materials.populateSelect('#c-polimero', this.unique('Polimero'));
-            Materials.populateSelect('#c-processo', this.unique('Processo'));
-          } catch (err) {
-            console.error('Errore caricamento CSV:', err);
-          }
-        },
-        populateSelect(sel, options) {
-          const el = $(sel); if (!el) return;
-          el.innerHTML = '';
-          options.forEach(opt => {
-            const o = document.createElement('option');
-            o.value = opt === 'Tutte' ? '' : opt;
-            o.textContent = opt;
-            el.appendChild(o);
-          });
-        },
-        mirrorFiltersIntoContactForm() {
-          const cr = $('#c-regione'), fr = $('#f-regione'); if (cr && fr) cr.value = fr.value;
-          const cp = $('#c-polimero'), fp = $('#f-polimero'); if (cp && fp) cp.value = fp.value;
-          const cpr = $('#c-processo'), fpr = $('#f-processo'); if (cpr && fpr) cpr.value = fpr.value;
-          const sync = () => {
-            const fr = $('#f-regione'), fp = $('#f-polimero'), fpr = $('#f-processo');
-            const cr = $('#c-regione'), cp = $('#c-polimero'), cpr = $('#c-processo');
-            if (cr && fr) cr.value = fr.value;
-            if (cp && fp) cp.value = fp.value;
-            if (cpr && fpr) cpr.value = fpr.value;
-          };
-          const frEl = $('#f-regione'); if (frEl) frEl.addEventListener('change', sync);
-          const fpEl = $('#f-polimero'); if (fpEl) fpEl.addEventListener('change', sync);
-          const fprEl = $('#f-processo'); if (fprEl) fprEl.addEventListener('change', sync);
-        },
-        renderFiltered() {
-          const regione = $('#f-regione') ? $('#f-regione').value || null : null;
-          const polimero = $('#f-polimero') ? $('#f-polimero').value || null : null;
-          const processo = $('#f-processo') ? $('#f-processo').value || null : null;
-          const rows = this.raw.filter(r => (
-            (!regione || r.Regione === regione) &&
-            (!polimero || r.Polimero === polimero) &&
-            (!processo || r.Processo === processo)
-          ));
-          const body = $('#materials-body'); if (!body) return;
-          body.innerHTML = '';
-          rows.forEach(r => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td class="px-3 py-2">${r.Regione}</td>
-              <td class="px-3 py-2">${r.Polimero}</td>
-              <td class="px-3 py-2">${r.Processo}</td>
-              <td class="px-3 py-2">${r.Materiale}</td>
-              <td class="px-3 py-2">${r.Note}</td>
-            `;
-            body.appendChild(tr);
-          });
-          const empty = $('#materials-empty'); if (empty) empty.classList.toggle('hidden-vis', rows.length !== 0);
-        }
-      };
-
-      // ========= Contacts (dual flow) =========
-      const Contacts = {
-        async handleSubmit(e) {
-          e.preventDefault();
-          const form = e.currentTarget;
-          const status = $('#contact-status');
-          status.textContent = 'Invio in corso…';
-          const btn = $('#btn-send'); if (btn) btn.disabled = true;
-          try {
-            const fd = new FormData(form);
-            const payload = {
-              nome: fd.get('nome')?.toString().trim() || '',
-              email: fd.get('email')?.toString().trim() || '',
-              regione: fd.get('regione')?.toString() || '',
-              polimero: fd.get('polimero')?.toString() || '',
-              processo: fd.get('processo')?.toString() || '',
-              messaggio: fd.get('messaggio')?.toString().trim() || ''
             };
-            const files = $('#c-file') ? $('#c-file').files : [];
-            const uploadedUrls = [];
-            if (files && files.length) {
-              for (const file of files) {
-                const path = `${Date.now()}_${Math.random().toString(36).slice(2)}_${file.name}`;
-                const { data, error } = await supabaseClient
-                  .storage.from(BUCKET)
-                  .upload(path, file, { contentType: file.type, upsert: false });
-                if (error) { console.warn('Upload errore:', error.message); continue; }
-                const { data: pub } = supabaseClient
-                  .storage.from(BUCKET)
-                  .getPublicUrl(data.path);
-                if (pub && pub.publicUrl) uploadedUrls.push(pub.publicUrl);
-              }
-            }
-            const { error: insertError } = await supabaseClient
-              .from(CONTACTS_TABLE)
-              .insert([{ ...payload, image_urls: uploadedUrls, created_at: new Date().toISOString() }]);
-            if (insertError) console.warn('Insert errore:', insertError.message);
-            const netlifyFD = new FormData();
-            netlifyFD.append('form-name', 'contatti');
-            for (const [k,v] of Object.entries(payload)) netlifyFD.append(k, v);
-            if (files && files.length) { for (const file of files) netlifyFD.append('allegati', file, file.name); }
-            uploadedUrls.forEach((u, i) => netlifyFD.append(`supabase_image_url_${i+1}`, u));
-            await fetch('/', { method: 'POST', body: netlifyFD });
-            status.textContent = 'Grazie! Messaggio inviato.';
-            form.reset();
-            Materials.mirrorFiltersIntoContactForm();
-          } catch (err) {
-            console.error(err);
-            status.textContent = 'Si è verificato un errore durante l\'invio.';
-          } finally {
-            const btn2 = $('#btn-send'); if (btn2) btn2.disabled = false;
-          }
+          });
+          Materials.populateSelect('#f-regione', Materials.unique('Regione'));
+          Materials.populateSelect('#f-polimero', Materials.unique('Polimero'));
+          Materials.populateSelect('#f-processo', Materials.unique('Processo'));
+          Materials.renderFiltered();
+          Materials.populateSelect('#c-regione', Materials.unique('Regione'));
+          Materials.populateSelect('#c-polimero', Materials.unique('Polimero'));
+          Materials.populateSelect('#c-processo', Materials.unique('Processo'));
+        })
+        .catch(function(err){ console.error('Errore caricamento CSV:', err); });
+    },
+    populateSelect: function(sel, options){
+      var el = $(sel); if (!el) return;
+      el.innerHTML = '';
+      for (var i=0;i<options.length;i++){
+        var opt = document.createElement('option');
+        opt.value = options[i] === 'Tutte' ? '' : options[i];
+        opt.textContent = options[i];
+        el.appendChild(opt);
+      }
+    },
+    mirrorFiltersIntoContactForm: function(){
+      var cr=$('#c-regione'), fr=$('#f-regione'); if (cr && fr) cr.value = fr.value;
+      var cp=$('#c-polimero'), fp=$('#f-polimero'); if (cp && fp) cp.value = fp.value;
+      var cpr=$('#c-processo'), fpr=$('#f-processo'); if (cpr && fpr) cpr.value = fpr.value;
+      function sync(){ var fr=$('#f-regione'), fp=$('#f-polimero'), fpr=$('#f-processo'); var cr=$('#c-regione'), cp=$('#c-polimero'), cpr=$('#c-processo'); if (cr && fr) cr.value = fr.value; if (cp && fp) cp.value = fp.value; if (cpr && fpr) cpr.value = fpr.value; }
+      var frel=$('#f-regione'); if (frel) frel.addEventListener('change', sync);
+      var fpel=$('#f-polimero'); if (fpel) fpel.addEventListener('change', sync);
+      var fprel=$('#f-processo'); if (fprel) fprel.addEventListener('change', sync);
+    },
+    renderFiltered: function(){
+      var fr=$('#f-regione'), fp=$('#f-polimero'), fpr=$('#f-processo');
+      var regione = fr ? (fr.value || null) : null;
+      var polimero = fp ? (fp.value || null) : null;
+      var processo = fpr ? (fpr.value || null) : null;
+      var rows = [];
+      for (var i=0;i<Materials.raw.length;i++){
+        var r = Materials.raw[i];
+        if (( !regione || r.Regione===regione ) && ( !polimero || r.Polimero===polimero ) && ( !processo || r.Processo===processo )) rows.push(r);
+      }
+      var body = $('#materials-body'); if (!body) return; body.innerHTML='';
+      for (var j=0;j<rows.length;j++){
+        var tr=document.createElement('tr');
+        tr.innerHTML = '<td class="px-3 py-2">'+rows[j].Regione+'</td>'+
+                       '<td class="px-3 py-2">'+rows[j].Polimero+'</td>'+
+                       '<td class="px-3 py-2">'+rows[j].Processo+'</td>'+
+                       '<td class="px-3 py-2">'+rows[j].Materiale+'</td>'+
+                       '<td class="px-3 py-2">'+rows[j].Note+'</td>';
+        body.appendChild(tr);
+      }
+      var empty=$('#materials-empty'); if (empty) empty.classList.toggle('hidden-vis', rows.length !== 0);
+    }
+  };
+
+  // ---- Contacts ----
+  var Contacts = {
+    handleSubmit: function(e){
+      e.preventDefault();
+      var form = e.currentTarget;
+      var status = $('#contact-status'); if (status) status.textContent='Invio in corso…';
+      var btn = $('#btn-send'); if (btn) btn.disabled = true;
+      try {
+        var fd = new FormData(form);
+        var payload = {
+          nome: (fd.get('nome') ? String(fd.get('nome')).trim() : ''),
+          email: (fd.get('email') ? String(fd.get('email')).trim() : ''),
+          regione: (fd.get('regione') ? String(fd.get('regione')) : ''),
+          polimero: (fd.get('polimero') ? String(fd.get('polimero')) : ''),
+          processo: (fd.get('processo') ? String(fd.get('processo')) : ''),
+          messaggio: (fd.get('messaggio') ? String(fd.get('messaggio')).trim() : '')
+        };
+        var fileInput = document.getElementById('c-file');
+        var files = (fileInput && fileInput.files) ? fileInput.files : [];
+        var uploadedUrls = [];
+        function doNetlifySubmit(){
+          var netlifyFD = new FormData();
+          netlifyFD.append('form-name','contatti');
+          for (var k in payload){ if (payload.hasOwnProperty(k)) netlifyFD.append(k, payload[k]); }
+          if (files && files.length){ for (var i=0;i<files.length;i++){ netlifyFD.append('allegati', files[i], files[i].name); } }
+          for (var u=0; u<uploadedUrls.length; u++){ netlifyFD.append('supabase_image_url_'+(u+1), uploadedUrls[u]); }
+          fetch('/', { method:'POST', body: netlifyFD }).then(function(){ if(status) status.textContent='Grazie! Messaggio inviato.'; form.reset(); Materials.mirrorFiltersIntoContactForm(); }).catch(function(){ if(status) status.textContent='Invio a Netlify non riuscito (ma il salvataggio interno potrebbe essere riuscito).'; });
         }
-      };
-    </script>
+        if (files && files.length){
+          var i=0;
+          function uploadNext(){
+            if (i>=files.length) return insertThenSubmit();
+            var file = files[i++];
+            var path = Date.now()+'_'+Math.random().toString(36).slice(2)+'_'+file.name;
+            supabaseClient.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false })
+              .then(function(res){
+                if (!res.error){ var pub = supabaseClient.storage.from(BUCKET).getPublicUrl(res.data.path); if (pub && pub.data && pub.data.publicUrl) uploadedUrls.push(pub.data.publicUrl); }
+                uploadNext();
+              })
+              .catch(function(){ uploadNext(); });
+          }
+          function insertThenSubmit(){
+            supabaseClient.from(CONTACTS_TABLE).insert([{ nome: payload.nome, email: payload.email, regione: payload.regione, polimero: payload.polimero, processo: payload.processo, messaggio: payload.messaggio, image_urls: uploadedUrls, created_at: new Date().toISOString() }])
+              .then(function(){ doNetlifySubmit(); })
+              .catch(function(){ doNetlifySubmit(); });
+          }
+          uploadNext();
+        } else {
+          supabaseClient.from(CONTACTS_TABLE).insert([{ nome: payload.nome, email: payload.email, regione: payload.regione, polimero: payload.polimero, processo: payload.processo, messaggio: payload.messaggio, image_urls: [], created_at: new Date().toISOString() }])
+            .then(function(){ doNetlifySubmit(); })
+            .catch(function(){ doNetlifySubmit(); });
+        }
+      } catch(err){ console.error(err); if(status) status.textContent='Si è verificato un errore durante l\'invio.'; }
+      finally { var btn2=$('#btn-send'); if (btn2) btn2.disabled=false; }
+    }
+  };
+})();
+</script>
   </body>
 </html>
