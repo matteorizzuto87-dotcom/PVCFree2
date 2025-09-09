@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PVCFree — Contatti & Database Materiali</title>
+  <title>PVC-FREE K2025 contatti e database</title>
   <meta name="color-scheme" content="dark light">
   <style>
     :root{--bg:#0c0f16;--panel:#121724;--muted:#9aa3b2;--text:#e8ecf4;--brand:#6aa5ff;--ok:#17c964;--warn:#ffaa00}
@@ -111,7 +111,7 @@
     <!-- ================== DATABASE MATERIALI ================== -->
     <section id="db" class="section">
       <div class="card">
-        <h2>Database Materiali</h2>
+        <h2>Database Materiali</h2> <span class="muted" style="margin-left:8px">— scegli tra i materiali a disposizione</span>
         <p class="muted">Filtra per <strong>Tipologia polimero</strong>, <strong>Applicazione</strong> e <strong>Durezza (ShA)</strong>. La tabella mostra le proprietà principali.</p>
 
         <div class="grid" style="margin-top:8px">
@@ -169,9 +169,7 @@
     <input type="email"  name="email"     hidden>
     <textarea name="messaggio"            hidden></textarea>
     <!-- l'allegato lo inviamo con fetch/FormData -->
-  
-  <div style="margin-top:8px"><button class="btn btn-outline" onclick="forgot()">Password dimenticata?</button></div>
-</form>
+  </form>
 
   <script>
   // ====== Tabs
@@ -384,44 +382,51 @@
   })();
   </script>
 
+<div id="gate" style="position:fixed;inset:0;display:grid;place-items:center;background:#0f172acc;backdrop-filter:blur(4px);z-index:9999">
+  <div style="background:#0b1220;border:1px solid #1f2937;border-radius:16px;padding:16px;box-shadow:0 20px 60px #0007;min-width:300px;max-width:90vw">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px">
+      <div style="display:flex;gap:10px;align-items:center">
+        <img src="./assets/logo.png" alt="TPV" style="height:32px">
+        <strong>PVC-FREE K2025 contatti e database</strong>
+      </div>
+      <img src="./assets/sft-polymer.png" alt="SFT Polymer" style="height:26px">
+    </div>
+    <div style="color:#94a3b8;margin-bottom:6px">Inserisci la password generale per entrare.</div>
+    <input id="sharedPw" type="password" placeholder="Password" style="width:100%;background:#0a0f1d;color:#e5e7eb;border:1px solid #1e293b;border-radius:10px;padding:10px 12px;outline:none;">
+    <div style="display:flex;gap:10px;margin-top:10px">
+      <button id="gateBtn" class="btn btn-primary" style="flex:1">Accedi</button>
+      <button id="gateClear" class="btn btn-outline">Cancella</button>
+    </div>
+    <div id="gateMsg" style="color:#f87171;margin-top:6px;font-size:12px"></div>
+  </div>
+</div>
+
+
 <script>
 (function(){
-  function qs(id){return document.getElementById(id);}
-  function ensureClient(){
-    if (window.supabaseClient) return window.supabaseClient;
-    if (window.supabase && window.ENV && window.ENV.SUPABASE_URL && window.ENV.SUPABASE_ANON_KEY){
-      try { return window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY); } catch(e){ return null; }
+  function unlock() {
+    var pwEl = document.getElementById('sharedPw');
+    var msg = document.getElementById('gateMsg');
+    var val = (pwEl && pwEl.value) ? pwEl.value.trim() : "";
+    if (val === "Elicottero64") {
+      sessionStorage.setItem('k2025_gate','ok');
+      var g = document.getElementById('gate'); if (g) g.style.display='none';
+    } else {
+      if (msg) msg.textContent = "Password errata";
     }
-    return null;
   }
-  window.forgot = async function forgot(){
-    var emailEl = qs('auth_email') || qs('auth-email') || qs('email');
-    var email = emailEl && emailEl.value ? String(emailEl.value).trim() : "";
-    if (!email){ alert("Inserisci la tua email nel campo Email e riprova."); return; }
-    var client = ensureClient();
-    if (!client){ alert("Reset non disponibile: configurazione Supabase mancante."); return; }
-    try{
-      var redirectTo = window.location.origin + "/";
-      var res = await client.auth.resetPasswordForEmail(email, { redirectTo: redirectTo });
-      if (res && res.error){ alert("Errore reset: " + res.error.message); }
-      else { alert("Ti abbiamo inviato un link per reimpostare la password."); }
-    }catch(e){ alert("Errore inatteso: " + (e && e.message ? e.message : e)); }
-  };
-
-  // Optional: visit with ?clear-sw=1 to unregister old service workers (no-op warning)
-  try{
-    var params = new URLSearchParams(window.location.search);
-    if (params.get("clear-sw") === "1" && 'serviceWorker' in navigator){
-      navigator.serviceWorker.getRegistrations().then(function(rs){
-        rs.forEach(function(r){ r.unregister(); });
-        if (window.caches && caches.keys) {
-          caches.keys().then(function(keys){ keys.forEach(function(k){ caches.delete(k); }); });
-        }
-        console.log("Service workers e cache rimossi.");
-      });
-    }
-  }catch(_){}
+  function setUp() {
+    var gate = document.getElementById('gate');
+    if (!gate) return;
+    var ok = sessionStorage.getItem('k2025_gate') === 'ok';
+    if (!ok) { gate.style.display = 'grid'; }
+    var btn = document.getElementById('gateBtn'); if (btn) btn.onclick = unlock;
+    var clr = document.getElementById('gateClear'); if (clr) clr.onclick = function(){ var p=document.getElementById('sharedPw'); if(p){p.value=''; p.focus();} };
+    var input = document.getElementById('sharedPw'); if (input) input.addEventListener('keydown', function(e){ if (e.key === 'Enter') unlock(); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setUp); else setUp();
 })();
 </script>
+
 </body>
 </html>
