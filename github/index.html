@@ -78,6 +78,7 @@
               <button type="button" class="btn w-full md:w-auto" id="btn-forgot">Password dimenticata?</button>
             </div>
             <p id="auth-message" class="text-sm text-slate-600"></p>
+            <div id="config-status" class="mt-2 text-xs text-slate-500"></div>
           </form>
           <div id="reset-section" class="mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200 hidden">
             <h3 class="font-semibold mb-2">Imposta una nuova password</h3>
@@ -230,14 +231,19 @@
       // Try to ensure the Supabase SDK is present (fallback loader if CDN blocked)
       async function ensureSupabaseSDK() {
         if (window.supabase) return true;
-        return await new Promise((resolve) => {
+        // Try primary CDN (jsDelivr)
+        const tryLoad = (src) => new Promise((resolve) => {
           const s = document.createElement('script');
-          s.src = 'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js';
+          s.src = src;
           s.defer = true;
           s.onload = () => resolve(!!window.supabase);
           s.onerror = () => resolve(false);
           document.head.appendChild(s);
         });
+        let ok = await tryLoad('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js');
+        if (!ok) ok = await tryLoad('https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js');
+        return ok;
+      });
       }
 
       // ========= Supabase init & diagnostics =========
@@ -246,35 +252,44 @@
         const yearEl = document.getElementById('year');
         if (yearEl) yearEl.textContent = new Date().getFullYear();
         const msg = (t)=>{ const p=document.getElementById('auth-message'); if(p) p.textContent=t; };
+        const status = (sdk,url,key)=>{
+          const el = document.getElementById('config-status');
+          if (!el) return;
+          let host = '(vuoto)';
+          try { host = new URL(url).host || host; } catch(e) {}
+          const keyMask = key ? (key.slice(0,8) + '… (' + key.length + ' chars)') : '(vuota)';
+          const ok = sdk && /^https?:\/\//.test(url) && !!key;
+          el.textContent = `Stato — SDK: ${sdk?'OK':'KO'} • URL: ${/^https?:\/\//.test(url)?host:'non valido'} • KEY: ${keyMask}`;
+          el.style.color = ok ? '#0a0' : '#a00';
+        };
 
         // Ensure SDK
         const sdkOk = await ensureSupabaseSDK();
+
+        const url = SUPABASE_URL;
+        const key = SUPABASE_ANON_KEY;
+        status(sdkOk, url, key);
+
         if (!sdkOk) {
           console.error('Supabase SDK non disponibile');
           msg('Errore: libreria di accesso non caricata. Controlla la connessione o i blocchi del browser.');
         }
 
-        const url = SUPABASE_URL;
-        const key = SUPABASE_ANON_KEY;
         const validConfig = sdkOk && /^https?:\/\//.test(url) && !!key;
 
         if (validConfig) {
-          supabaseClient = window.supabase.createClient(url, key);
           try {
+            supabaseClient = window.supabase.createClient(url, key);
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) { UI.showApp(); App.initAfterLogin(session); } else { UI.showAuth(); }
             supabaseClient.auth.onAuthStateChange(async (event, session) => {
               if (event === 'PASSWORD_RECOVERY') {
-                const resetBox = document.getElementById('reset-section');
-                if (resetBox) resetBox.classList.remove('hidden');
-                const rm = document.getElementById('reset-message');
-                if (rm) rm.textContent = 'Inserisci la nuova password e conferma.';
+                const resetBox = document.getElementById('reset-section'); if (resetBox) resetBox.classList.remove('hidden');
+                const rm = document.getElementById('reset-message'); if (rm) rm.textContent = 'Inserisci la nuova password e conferma.';
                 UI.showAuth();
               } else if (session) {
-                const resetBox = document.getElementById('reset-section');
-                if (resetBox) resetBox.classList.add('hidden');
-                UI.showApp();
-                App.initAfterLogin(session);
+                const resetBox = document.getElementById('reset-section'); if (resetBox) resetBox.classList.add('hidden');
+                UI.showApp(); App.initAfterLogin(session);
               } else {
                 UI.showAuth();
               }
