@@ -31,8 +31,8 @@
 
     <!-- ENV placeholders (replace or set here) -->
     <!-- Option A: edit content of these metas; Option B: override at runtime with window.ENV in a separate script. -->
-    <meta name="supabase-url" content="YOUR_SUPABASE_URL" />
-    <meta name="supabase-anon-key" content="YOUR_SUPABASE_ANON_KEY" />
+    <meta name="supabase-url" content="https://cggnkjqmnilnflxaynda.supabase.co" />
+    <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNnZ25ranFtbmlsbmZseGF5bmRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5NzI5NjgsImV4cCI6MjA3MjU0ODk2OH0.ndVbgmNmQNJndDEPyb2q2Sy9h0_9PcaIaGvahAn7e2M" />
 
     <!-- Basic theming -->
     <meta name="theme-color" content="#000000"/>
@@ -69,12 +69,30 @@
               <label class="label" for="auth-password">Password</label>
               <input id="auth-password" name="password" type="password" class="input" placeholder="••••••••" required />
             </div>
-            <div class="flex items-center justify-between gap-2">
-              <button type="submit" class="btn btn-primary w-full" id="btn-login">Accedi</button>
-              <button type="button" class="btn w-full" id="btn-register">Registrati</button>
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <button type="submit" class="btn btn-primary w-full md:w-auto" id="btn-login">Accedi</button>
+              <button type="button" class="btn w-full md:w-auto" id="btn-register">Registrati</button>
+              <button type="button" class="btn w-full md:w-auto" id="btn-forgot">Password dimenticata?</button>
             </div>
             <p id="auth-message" class="text-sm text-slate-600"></p>
           </form>
+          <div id="reset-section" class="mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200 hidden">
+            <h3 class="font-semibold mb-2">Imposta una nuova password</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="label" for="reset-password">Nuova password</label>
+                <input id="reset-password" type="password" class="input" placeholder="Nuova password" />
+              </div>
+              <div>
+                <label class="label" for="reset-password2">Ripeti password</label>
+                <input id="reset-password2" type="password" class="input" placeholder="Ripeti password" />
+              </div>
+            </div>
+            <div class="mt-3 flex items-center gap-2">
+              <button id="btn-set-password" class="btn btn-primary">Imposta nuova password</button>
+              <span id="reset-message" class="text-sm text-slate-600"></span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -212,30 +230,51 @@
       document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('year').textContent = new Date().getFullYear();
 
+        const msg = (t)=>{ const p=document.getElementById('auth-message'); if(p) p.textContent=t; };
+        const urlMeta = document.querySelector('meta[name="supabase-url"]');
+        const keyMeta = document.querySelector('meta[name="supabase-anon-key"]');
+        const url = urlMeta ? urlMeta.getAttribute('content') : '';
+        const key = keyMeta ? keyMeta.getAttribute('content') : '';
+
+        // Diagnostica caricamento SDK
         if (!window.supabase) {
           console.error('Supabase SDK non caricato');
-          return;
+          msg('Errore: libreria di accesso non caricata. Controlla la connessione o i blocchi del browser.');
         }
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Session check
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (session) {
-          UI.showApp();
-          App.initAfterLogin(session);
+        // Inizializza solo se config valida
+        const validConfig = window.supabase && /^https?:\/\//.test(url) && key && !/YOUR_SUPABASE|YOUR-/.test(key);
+        if (validConfig) {
+          window.supabaseClient = window.supabase.createClient(url, key);
+
+          // Stato sessione iniziale
+          const { data: { session } } = await supabaseClient.auth.getSession();
+          if (session) { UI.showApp(); App.initAfterLogin(session); } else { UI.showAuth(); }
+
+          // Listener auth (include recovery)
+          supabaseClient.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'PASSWORD_RECOVERY') {
+              document.getElementById('reset-section').classList.remove('hidden');
+              document.getElementById('reset-message').textContent = 'Inserisci la nuova password e conferma.';
+              UI.showAuth();
+            } else if (session) {
+              document.getElementById('reset-section').classList.add('hidden');
+              UI.showApp();
+              App.initAfterLogin(session);
+            } else {
+              UI.showAuth();
+            }
+          });
         } else {
           UI.showAuth();
+          if (!/^https?:\/\//.test(url) || !key || /YOUR_SUPABASE|YOUR-/.test(key)) {
+            msg('Configurazione mancante: inserisci URL e chiave di Supabase nel file.');
+          }
         }
 
-        // Auth state listener
-        supabaseClient.auth.onAuthStateChange((_event, session) => {
-          if (session) {
-            UI.showApp();
-            App.initAfterLogin(session);
-          } else {
-            UI.showAuth();
-          }
-        });
+        Auth.mount();
+        App.mount();
+      });
 
         Auth.mount();
         App.mount();
@@ -247,32 +286,51 @@
           const form = $('#auth-form');
           form.addEventListener('submit', Auth.login);
           $('#btn-register').addEventListener('click', Auth.register);
+          const forgot = $('#btn-forgot');
+          if (forgot) forgot.addEventListener('click', Auth.forgot);
+          const setBtn = $('#btn-set-password');
+          if (setBtn) setBtn.addEventListener('click', Auth.setNewPassword);
         },
         async login(e) {
           e.preventDefault();
-          $('#auth-message').textContent = 'Accesso in corso…';
+          const M = (id)=>document.getElementById(id);
+          M('auth-message').textContent = 'Accesso in corso…';
+          if (!window.supabaseClient) { M('auth-message').textContent = 'Impossibile accedere: configurazione Supabase mancante.'; return; }
           const email = $('#auth-email').value.trim();
           const password = $('#auth-password').value;
           const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-          if (error) {
-            $('#auth-message').textContent = 'Errore: ' + error.message;
-          } else {
-            $('#auth-message').textContent = '';
-          }
+          M('auth-message').textContent = error ? ('Errore: ' + error.message) : '';
         },
         async register() {
-          $('#auth-message').textContent = 'Registrazione in corso…';
+          const M = (id)=>document.getElementById(id);
+          M('auth-message').textContent = 'Registrazione in corso…';
+          if (!window.supabaseClient) { M('auth-message').textContent = 'Impossibile registrarsi: configurazione Supabase mancante.'; return; }
           const email = $('#auth-email').value.trim();
           const password = $('#auth-password').value;
           const { error } = await supabaseClient.auth.signUp({ email, password });
-          if (error) {
-            $('#auth-message').textContent = 'Errore: ' + error.message;
-          } else {
-            $('#auth-message').textContent = 'Registrazione effettuata. Controlla la tua email (se previsto) e poi accedi.';
-          }
+          M('auth-message').textContent = error ? ('Errore: ' + error.message) : 'Registrazione effettuata. Ora accedi.';
         },
-        async logout() {
-          await supabaseClient.auth.signOut();
+        async forgot() {
+          const M = (id)=>document.getElementById(id);
+          const email = $('#auth-email').value.trim();
+          if (!email) { M('auth-message').textContent = 'Inserisci la tua email nel campo sopra e poi clicca "Password dimenticata?"'; return; }
+          if (!window.supabaseClient) { M('auth-message').textContent = 'Impossibile inviare reset: configurazione Supabase mancante.'; return; }
+          const redirectTo = window.location.origin + '/';
+          const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
+          M('auth-message').textContent = error ? ('Errore reset: ' + error.message) : 'Ti abbiamo inviato un link per reimpostare la password.';
+        },
+        async setNewPassword() {
+          const pass1 = $('#reset-password').value;
+          const pass2 = $('#reset-password2').value;
+          const R = (t)=>{ const el=$('#reset-message'); if(el) el.textContent=t; };
+          if (!pass1 || pass1 !== pass2) { R('Le password non coincidono.'); return; }
+          if (!window.supabaseClient) { R('Configurazione mancante.'); return; }
+          const { error } = await supabaseClient.auth.updateUser({ password: pass1 });
+          if (error) { R('Errore: ' + error.message); return; }
+          R('Password aggiornata! Ora puoi accedere.');
+          setTimeout(()=>{
+            document.getElementById('reset-section').classList.add('hidden');
+          }, 1200);
         }
       };
 
