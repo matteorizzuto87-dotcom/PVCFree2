@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contatti – Admin (Netlify Forms)</title>
+  <style>
+    :root{--bg:#0b0d12;--panel:#121621;--text:#e8ecf4;--muted:#9aa3b2}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    header{max-width:1100px;margin:24px auto;padding:0 20px;display:flex;justify-content:space-between;align-items:center}
+    .container{max-width:1100px;margin:0 auto 64px;padding:0 20px}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.00));border:1px solid rgba(255,255,255,.08);border-radius:16px;backdrop-filter:blur(8px);box-shadow:0 12px 30px rgba(0,0,0,.35)}
+    .panel{padding:22px}
+    h1{margin:0 0 6px} p{color:var(--muted)}
+    input,select,button{padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#121621;color:var(--text)}
+    button{cursor:pointer} .btn{background:#6aa5ff;color:#0b0d12;border:0;border-radius:12px;padding:10px 14px;font-weight:700}
+    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0 16px}
+    .table-wrap{overflow:auto;border-radius:12px;border:1px solid rgba(255,255,255,.08)}
+    table{width:100%;border-collapse:separate;border-spacing:0}
+    thead th{position:sticky;top:0;background:#11152a;text-align:left;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.08)}
+    tbody td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px}
+    tbody tr:hover{background:rgba(255,255,255,.03)}
+    .muted{color:var(--muted);font-size:12px}
+    .center{text-align:center}
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Contatti – Admin</strong>
+    <a href="/" style="color:#6aa5ff">⬅︎ Torna al sito</a>
+  </header>
+
+  <main class="container">
+    <section class="card panel">
+      <h1>Submissions Netlify Forms</h1>
+      <p class="muted">Dati letti da <code>/.netlify/functions/get-submissions</code>. La colonna 📎 contiene i link ai file caricati. L’export Excel aggiunge hyperlink cliccabili.</p>
+      <div class="toolbar">
+        <button id="btn-reload" class="btn">Ricarica</button>
+        <button id="btn-export" class="btn">Esporta Excel</button>
+        <span id="meta" class="muted"></span>
+      </div>
+      <div class="table-wrap">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Nome</th>
+              <th>Email</th>
+              <th>Messaggio</th>
+              <th class="center">📎</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
+  <script>
+    const TBL = document.querySelector('#tbl tbody');
+    const META = document.getElementById('meta');
+    const BTN_RELOAD = document.getElementById('btn-reload');
+    const BTN_EXPORT = document.getElementById('btn-export');
+    let DATA = [];
+
+    function escapeHtml(s){ return String(s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;"}[m])); }
+
+    async function load(){
+      META.textContent = "Carico...";
+      TBL.innerHTML = "<tr><td colspan='5'>Caricamento…</td></tr>";
+      try{
+        const r = await fetch('/.netlify/functions/get-submissions');
+        const j = await r.json();
+        if(!r.ok) throw new Error(j.error||'Errore API');
+        DATA = j.submissions || [];
+        META.textContent = `${j.form_name} – ${j.count} submissions`;
+        render(DATA);
+      }catch(e){
+        META.textContent = "Errore: "+e.message;
+        TBL.innerHTML = "<tr><td colspan='5'>Errore: "+escapeHtml(e.message)+"</td></tr>";
+      }
+    }
+
+    function render(rows){
+      if(!rows.length){ TBL.innerHTML = "<tr><td colspan='5'>Nessun dato</td></tr>"; return; }
+      TBL.innerHTML = rows.map(s => {
+        const d = s.data||{};
+        const msg = d.messaggio || d.message || d.note || "";
+        const atts = (s.attachments||[]);
+        const icon = atts.length ? atts.map(a => `<a href="${encodeURI(a.url)}" download title="${escapeHtml(a.name||'file')}">📎</a>`).join(" ") : "<span class='muted'>—</span>";
+        const date = new Date(s.created_at).toLocaleString('it-IT');
+        return `<tr>
+          <td>${escapeHtml(date)}</td>
+          <td>${escapeHtml(d.nome || s.name || '')}</td>
+          <td>${escapeHtml(d.email || s.email || '')}</td>
+          <td>${escapeHtml(msg)}</td>
+          <td class="center">${icon}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    BTN_RELOAD.addEventListener('click', load);
+
+    BTN_EXPORT.addEventListener('click', () => {
+      const headers = ["Data","Nome","Email","Messaggio","Allegato"];
+      const aoa = [headers];
+      DATA.forEach(s => {
+        const d = s.data||{};
+        const msg = d.messaggio || d.message || d.note || "";
+        const firstUrl = (s.attachments||[])[0]?.url || "";
+        aoa.push([s.created_at, d.nome || s.name || "", d.email || s.email || "", msg, firstUrl]);
+      });
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      XLSX.utils.book_append_sheet(wb, ws, "Contatti");
+      for (let i = 0; i < DATA.length; i++) {
+        const url = (DATA[i].attachments||[])[0]?.url;
+        if (!url) continue;
+        const cellRef = XLSX.utils.encode_cell({ c: 4, r: i + 1 });
+        ws[cellRef] = { t:'s', v:'Apri immagine', l:{ Target: url } };
+      }
+      XLSX.writeFile(wb, "contatti.xlsx");
+    });
+
+    load();
+  </script>
+</body>
+</html>
