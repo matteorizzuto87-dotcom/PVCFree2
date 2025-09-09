@@ -219,66 +219,74 @@
       const CONTACTS_TABLE = 'contacts';
       const MATERIALS_CSV = '/data/materiali_database.csv';
 
-      // ========= DOM helpers =========
+      // ========= Helpers =========
       const $ = (sel) => document.querySelector(sel);
       const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-
       const UI = {
         showAuth() { $('#auth-section').style.display = 'grid'; $('#app-section').style.display = 'none'; $('#btn-login-header').style.display=''; $('#btn-logout').style.display='none'; },
         showApp()  { $('#auth-section').style.display = 'none'; $('#app-section').style.display = 'block'; $('#btn-login-header').style.display='none'; $('#btn-logout').style.display=''; }
       };
 
+      // Try to ensure the Supabase SDK is present (fallback loader if CDN blocked)
+      async function ensureSupabaseSDK() {
+        if (window.supabase) return true;
+        return await new Promise((resolve) => {
+          const s = document.createElement('script');
+          s.src = 'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js';
+          s.defer = true;
+          s.onload = () => resolve(!!window.supabase);
+          s.onerror = () => resolve(false);
+          document.head.appendChild(s);
+        });
+      }
+
       // ========= Supabase init & diagnostics =========
       let supabaseClient;
       document.addEventListener('DOMContentLoaded', async () => {
-        // Footer year
         const yearEl = document.getElementById('year');
         if (yearEl) yearEl.textContent = new Date().getFullYear();
-
         const msg = (t)=>{ const p=document.getElementById('auth-message'); if(p) p.textContent=t; };
 
-        // Diagnostics
-        if (!window.supabase) {
-          console.error('Supabase SDK non caricato');
+        // Ensure SDK
+        const sdkOk = await ensureSupabaseSDK();
+        if (!sdkOk) {
+          console.error('Supabase SDK non disponibile');
           msg('Errore: libreria di accesso non caricata. Controlla la connessione o i blocchi del browser.');
         }
 
         const url = SUPABASE_URL;
         const key = SUPABASE_ANON_KEY;
-        const validConfig = window.supabase && /^https?:\/\//.test(url) && !!key && !/YOUR_SUPABASE|YOUR-/.test(key);
+        const validConfig = sdkOk && /^https?:\/\//.test(url) && !!key;
 
         if (validConfig) {
           supabaseClient = window.supabase.createClient(url, key);
-
-          // Session check
-          const { data: { session } } = await supabaseClient.auth.getSession();
-          if (session) {
-            UI.showApp();
-            App.initAfterLogin(session);
-          } else {
+          try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) { UI.showApp(); App.initAfterLogin(session); } else { UI.showAuth(); }
+            supabaseClient.auth.onAuthStateChange(async (event, session) => {
+              if (event === 'PASSWORD_RECOVERY') {
+                const resetBox = document.getElementById('reset-section');
+                if (resetBox) resetBox.classList.remove('hidden');
+                const rm = document.getElementById('reset-message');
+                if (rm) rm.textContent = 'Inserisci la nuova password e conferma.';
+                UI.showAuth();
+              } else if (session) {
+                const resetBox = document.getElementById('reset-section');
+                if (resetBox) resetBox.classList.add('hidden');
+                UI.showApp();
+                App.initAfterLogin(session);
+              } else {
+                UI.showAuth();
+              }
+            });
+          } catch (e) {
+            console.error('Init Supabase failed:', e);
+            msg('Configurazione non valida o servizio non raggiungibile.');
             UI.showAuth();
           }
-
-          // Auth state changes (includes password recovery)
-          supabaseClient.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'PASSWORD_RECOVERY') {
-              const resetBox = document.getElementById('reset-section');
-              if (resetBox) resetBox.classList.remove('hidden');
-              const rm = document.getElementById('reset-message');
-              if (rm) rm.textContent = 'Inserisci la nuova password e conferma.';
-              UI.showAuth();
-            } else if (session) {
-              const resetBox = document.getElementById('reset-section');
-              if (resetBox) resetBox.classList.add('hidden');
-              UI.showApp();
-              App.initAfterLogin(session);
-            } else {
-              UI.showAuth();
-            }
-          });
         } else {
           UI.showAuth();
-          msg('Configurazione mancante o non valida: inserisci URL e chiave di Supabase.');
+          msg('Configurazione mancante o non valida: controlla URL e chiave di Supabase.');
         }
 
         Auth.mount();
@@ -288,14 +296,10 @@
       // ========= Auth =========
       const Auth = {
         mount() {
-          const form = $('#auth-form');
-          if (form) form.addEventListener('submit', Auth.login);
-          const reg = $('#btn-register');
-          if (reg) reg.addEventListener('click', Auth.register);
-          const forgot = $('#btn-forgot');
-          if (forgot) forgot.addEventListener('click', Auth.forgot);
-          const setBtn = $('#btn-set-password');
-          if (setBtn) setBtn.addEventListener('click', Auth.setNewPassword);
+          const form = $('#auth-form'); if (form) form.addEventListener('submit', Auth.login);
+          const reg = $('#btn-register'); if (reg) reg.addEventListener('click', Auth.register);
+          const forgot = $('#btn-forgot'); if (forgot) forgot.addEventListener('click', Auth.forgot);
+          const setBtn = $('#btn-set-password'); if (setBtn) setBtn.addEventListener('click', Auth.setNewPassword);
         },
         async login(e) {
           e.preventDefault();
@@ -334,10 +338,7 @@
           const { error } = await supabaseClient.auth.updateUser({ password: pass1 });
           if (error) { R('Errore: ' + error.message); return; }
           R('Password aggiornata! Ora puoi accedere.');
-          setTimeout(()=>{
-            const resetBox = document.getElementById('reset-section');
-            if (resetBox) resetBox.classList.add('hidden');
-          }, 1200);
+          setTimeout(()=>{ const resetBox = document.getElementById('reset-section'); if (resetBox) resetBox.classList.add('hidden'); }, 1200);
         }
       };
 
@@ -351,11 +352,9 @@
           Materials.mirrorFiltersIntoContactForm();
         },
         mount() {
-          // Materials filters
           const rf = $('#f-regione'); if (rf) rf.addEventListener('change', Materials.renderFiltered.bind(Materials));
           const pf = $('#f-polimero'); if (pf) pf.addEventListener('change', Materials.renderFiltered.bind(Materials));
-          const pf2 = $('#f-processo'); if (pf2) pf2.addEventListener('change', Materials.renderFiltered.bind(Materials));
-          // Contact form submit
+          const p2 = $('#f-processo'); if (p2) p2.addEventListener('change', Materials.renderFiltered.bind(Materials));
           const cf = $('#contact-form'); if (cf) cf.addEventListener('submit', Contacts.handleSubmit);
         }
       };
@@ -379,14 +378,10 @@
               Materiale: r.Materiale || r.materiale || r.Material || '',
               Note: r.Note || r.note || ''
             }));
-
-            // Populate filters
             Materials.populateSelect('#f-regione', this.unique('Regione'));
             Materials.populateSelect('#f-polimero', this.unique('Polimero'));
             Materials.populateSelect('#f-processo', this.unique('Processo'));
             Materials.renderFiltered();
-
-            // Also populate contact selects
             Materials.populateSelect('#c-regione', this.unique('Regione'));
             Materials.populateSelect('#c-polimero', this.unique('Polimero'));
             Materials.populateSelect('#c-processo', this.unique('Processo'));
@@ -395,8 +390,7 @@
           }
         },
         populateSelect(sel, options) {
-          const el = $(sel);
-          if (!el) return;
+          const el = $(sel); if (!el) return;
           el.innerHTML = '';
           options.forEach(opt => {
             const o = document.createElement('option');
@@ -406,21 +400,19 @@
           });
         },
         mirrorFiltersIntoContactForm() {
-          const cr = $('#c-regione'); const fr = $('#f-regione'); if (cr && fr) cr.value = fr.value;
-          const cp = $('#c-polimero'); const fp = $('#f-polimero'); if (cp && fp) cp.value = fp.value;
-          const cpr = $('#c-processo'); const fpr = $('#f-processo'); if (cpr && fpr) cpr.value = fpr.value;
-          ['#f-regione','#f-polimero','#f-processo'].forEach(() => {
-            const sync = () => {
-              const fr = $('#f-regione'), fp = $('#f-polimero'), fpr = $('#f-processo');
-              const cr = $('#c-regione'), cp = $('#c-polimero'), cpr = $('#c-processo');
-              if (cr && fr) cr.value = fr.value;
-              if (cp && fp) cp.value = fp.value;
-              if (cpr && fpr) cpr.value = fpr.value;
-            };
-            const frEl = $('#f-regione'); if (frEl) frEl.addEventListener('change', sync);
-            const fpEl = $('#f-polimero'); if (fpEl) fpEl.addEventListener('change', sync);
-            const fprEl = $('#f-processo'); if (fprEl) fprEl.addEventListener('change', sync);
-          });
+          const cr = $('#c-regione'), fr = $('#f-regione'); if (cr && fr) cr.value = fr.value;
+          const cp = $('#c-polimero'), fp = $('#f-polimero'); if (cp && fp) cp.value = fp.value;
+          const cpr = $('#c-processo'), fpr = $('#f-processo'); if (cpr && fpr) cpr.value = fpr.value;
+          const sync = () => {
+            const fr = $('#f-regione'), fp = $('#f-polimero'), fpr = $('#f-processo');
+            const cr = $('#c-regione'), cp = $('#c-polimero'), cpr = $('#c-processo');
+            if (cr && fr) cr.value = fr.value;
+            if (cp && fp) cp.value = fp.value;
+            if (cpr && fpr) cpr.value = fpr.value;
+          };
+          const frEl = $('#f-regione'); if (frEl) frEl.addEventListener('change', sync);
+          const fpEl = $('#f-polimero'); if (fpEl) fpEl.addEventListener('change', sync);
+          const fprEl = $('#f-processo'); if (fprEl) fprEl.addEventListener('change', sync);
         },
         renderFiltered() {
           const regione = $('#f-regione') ? $('#f-regione').value || null : null;
@@ -431,8 +423,7 @@
             (!polimero || r.Polimero === polimero) &&
             (!processo || r.Processo === processo)
           ));
-          const body = $('#materials-body');
-          if (!body) return;
+          const body = $('#materials-body'); if (!body) return;
           body.innerHTML = '';
           rows.forEach(r => {
             const tr = document.createElement('tr');
@@ -445,8 +436,7 @@
             `;
             body.appendChild(tr);
           });
-          const empty = $('#materials-empty');
-          if (empty) empty.classList.toggle('hidden-vis', rows.length !== 0);
+          const empty = $('#materials-empty'); if (empty) empty.classList.toggle('hidden-vis', rows.length !== 0);
         }
       };
 
@@ -458,9 +448,7 @@
           const status = $('#contact-status');
           status.textContent = 'Invio in corso…';
           const btn = $('#btn-send'); if (btn) btn.disabled = true;
-
           try {
-            // Read form values
             const fd = new FormData(form);
             const payload = {
               nome: fd.get('nome')?.toString().trim() || '',
@@ -470,8 +458,6 @@
               processo: fd.get('processo')?.toString() || '',
               messaggio: fd.get('messaggio')?.toString().trim() || ''
             };
-
-            // Upload files to Supabase Storage
             const files = $('#c-file') ? $('#c-file').files : [];
             const uploadedUrls = [];
             if (files && files.length) {
@@ -487,24 +473,16 @@
                 if (pub && pub.publicUrl) uploadedUrls.push(pub.publicUrl);
               }
             }
-
-            // Insert contact row in Supabase
             const { error: insertError } = await supabaseClient
               .from(CONTACTS_TABLE)
               .insert([{ ...payload, image_urls: uploadedUrls, created_at: new Date().toISOString() }]);
             if (insertError) console.warn('Insert errore:', insertError.message);
-
-            // Parallel submit to Netlify Forms (include the same files)
             const netlifyFD = new FormData();
             netlifyFD.append('form-name', 'contatti');
             for (const [k,v] of Object.entries(payload)) netlifyFD.append(k, v);
-            if (files && files.length) {
-              for (const file of files) netlifyFD.append('allegati', file, file.name);
-            }
+            if (files && files.length) { for (const file of files) netlifyFD.append('allegati', file, file.name); }
             uploadedUrls.forEach((u, i) => netlifyFD.append(`supabase_image_url_${i+1}`, u));
-
             await fetch('/', { method: 'POST', body: netlifyFD });
-
             status.textContent = 'Grazie! Messaggio inviato.';
             form.reset();
             Materials.mirrorFiltersIntoContactForm();
