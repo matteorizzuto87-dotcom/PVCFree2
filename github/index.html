@@ -41,7 +41,10 @@
     <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-slate-200">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
         <div class="flex items-center gap-3">
-          <img src="/assets/logo.svg" alt="PVCFree" class="h-8 w-8" onerror="this.style.display='none'" />
+          <svg class="h-8 w-8" viewBox="0 0 64 64" aria-label="PVCFree logo" role="img">
+            <rect width="64" height="64" rx="12" fill="#111"/>
+            <text x="50%" y="52%" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" fill="#fff">PVC</text>
+          </svg>
           <span class="text-lg font-semibold">PVCFree</span>
           <span class="badge">pvcfree2</span>
         </div>
@@ -225,40 +228,48 @@
         showApp()  { $('#auth-section').style.display = 'none'; $('#app-section').style.display = 'block'; $('#btn-login-header').style.display='none'; $('#btn-logout').style.display=''; }
       };
 
-      // ========= Supabase init =========
+      // ========= Supabase init & diagnostics =========
       let supabaseClient;
       document.addEventListener('DOMContentLoaded', async () => {
-        document.getElementById('year').textContent = new Date().getFullYear();
+        // Footer year
+        const yearEl = document.getElementById('year');
+        if (yearEl) yearEl.textContent = new Date().getFullYear();
 
         const msg = (t)=>{ const p=document.getElementById('auth-message'); if(p) p.textContent=t; };
-        const urlMeta = document.querySelector('meta[name="supabase-url"]');
-        const keyMeta = document.querySelector('meta[name="supabase-anon-key"]');
-        const url = urlMeta ? urlMeta.getAttribute('content') : '';
-        const key = keyMeta ? keyMeta.getAttribute('content') : '';
 
-        // Diagnostica caricamento SDK
+        // Diagnostics
         if (!window.supabase) {
           console.error('Supabase SDK non caricato');
           msg('Errore: libreria di accesso non caricata. Controlla la connessione o i blocchi del browser.');
         }
 
-        // Inizializza solo se config valida
-        const validConfig = window.supabase && /^https?:\/\//.test(url) && key && !/YOUR_SUPABASE|YOUR-/.test(key);
+        const url = SUPABASE_URL;
+        const key = SUPABASE_ANON_KEY;
+        const validConfig = window.supabase && /^https?:\/\//.test(url) && !!key && !/YOUR_SUPABASE|YOUR-/.test(key);
+
         if (validConfig) {
-          window.supabaseClient = window.supabase.createClient(url, key);
+          supabaseClient = window.supabase.createClient(url, key);
 
-          // Stato sessione iniziale
+          // Session check
           const { data: { session } } = await supabaseClient.auth.getSession();
-          if (session) { UI.showApp(); App.initAfterLogin(session); } else { UI.showAuth(); }
+          if (session) {
+            UI.showApp();
+            App.initAfterLogin(session);
+          } else {
+            UI.showAuth();
+          }
 
-          // Listener auth (include recovery)
+          // Auth state changes (includes password recovery)
           supabaseClient.auth.onAuthStateChange(async (event, session) => {
             if (event === 'PASSWORD_RECOVERY') {
-              document.getElementById('reset-section').classList.remove('hidden');
-              document.getElementById('reset-message').textContent = 'Inserisci la nuova password e conferma.';
+              const resetBox = document.getElementById('reset-section');
+              if (resetBox) resetBox.classList.remove('hidden');
+              const rm = document.getElementById('reset-message');
+              if (rm) rm.textContent = 'Inserisci la nuova password e conferma.';
               UI.showAuth();
             } else if (session) {
-              document.getElementById('reset-section').classList.add('hidden');
+              const resetBox = document.getElementById('reset-section');
+              if (resetBox) resetBox.classList.add('hidden');
               UI.showApp();
               App.initAfterLogin(session);
             } else {
@@ -267,14 +278,8 @@
           });
         } else {
           UI.showAuth();
-          if (!/^https?:\/\//.test(url) || !key || /YOUR_SUPABASE|YOUR-/.test(key)) {
-            msg('Configurazione mancante: inserisci URL e chiave di Supabase nel file.');
-          }
+          msg('Configurazione mancante o non valida: inserisci URL e chiave di Supabase.');
         }
-
-        Auth.mount();
-        App.mount();
-      });
 
         Auth.mount();
         App.mount();
@@ -284,8 +289,9 @@
       const Auth = {
         mount() {
           const form = $('#auth-form');
-          form.addEventListener('submit', Auth.login);
-          $('#btn-register').addEventListener('click', Auth.register);
+          if (form) form.addEventListener('submit', Auth.login);
+          const reg = $('#btn-register');
+          if (reg) reg.addEventListener('click', Auth.register);
           const forgot = $('#btn-forgot');
           if (forgot) forgot.addEventListener('click', Auth.forgot);
           const setBtn = $('#btn-set-password');
@@ -329,7 +335,8 @@
           if (error) { R('Errore: ' + error.message); return; }
           R('Password aggiornata! Ora puoi accedere.');
           setTimeout(()=>{
-            document.getElementById('reset-section').classList.add('hidden');
+            const resetBox = document.getElementById('reset-section');
+            if (resetBox) resetBox.classList.add('hidden');
           }, 1200);
         }
       };
@@ -340,19 +347,16 @@
         async initAfterLogin(session) {
           if (this.didInit) return;
           this.didInit = true;
-          // Load filters + table
           await Materials.load();
-          // Mirror filter values into contact form selects
           Materials.mirrorFiltersIntoContactForm();
         },
         mount() {
           // Materials filters
-          $('#f-regione').addEventListener('change', Materials.renderFiltered);
-          $('#f-polimero').addEventListener('change', Materials.renderFiltered);
-          $('#f-processo').addEventListener('change', Materials.renderFiltered);
-
+          const rf = $('#f-regione'); if (rf) rf.addEventListener('change', Materials.renderFiltered.bind(Materials));
+          const pf = $('#f-polimero'); if (pf) pf.addEventListener('change', Materials.renderFiltered.bind(Materials));
+          const pf2 = $('#f-processo'); if (pf2) pf2.addEventListener('change', Materials.renderFiltered.bind(Materials));
           // Contact form submit
-          $('#contact-form').addEventListener('submit', Contacts.handleSubmit);
+          const cf = $('#contact-form'); if (cf) cf.addEventListener('submit', Contacts.handleSubmit);
         }
       };
 
@@ -392,6 +396,7 @@
         },
         populateSelect(sel, options) {
           const el = $(sel);
+          if (!el) return;
           el.innerHTML = '';
           options.forEach(opt => {
             const o = document.createElement('option');
@@ -401,28 +406,33 @@
           });
         },
         mirrorFiltersIntoContactForm() {
-          $('#c-regione').value = $('#f-regione').value;
-          $('#c-polimero').value = $('#f-polimero').value;
-          $('#c-processo').value = $('#f-processo').value;
-          ['#f-regione','#f-polimero','#f-processo'].forEach((id, idx) => {
-            $(id).addEventListener('change', () => {
-              ['#c-regione','#c-polimero','#c-processo'][idx] &&
-              ($('#c-regione').value = $('#f-regione').value,
-               $('#c-polimero').value = $('#f-polimero').value,
-               $('#c-processo').value = $('#f-processo').value);
-            });
+          const cr = $('#c-regione'); const fr = $('#f-regione'); if (cr && fr) cr.value = fr.value;
+          const cp = $('#c-polimero'); const fp = $('#f-polimero'); if (cp && fp) cp.value = fp.value;
+          const cpr = $('#c-processo'); const fpr = $('#f-processo'); if (cpr && fpr) cpr.value = fpr.value;
+          ['#f-regione','#f-polimero','#f-processo'].forEach(() => {
+            const sync = () => {
+              const fr = $('#f-regione'), fp = $('#f-polimero'), fpr = $('#f-processo');
+              const cr = $('#c-regione'), cp = $('#c-polimero'), cpr = $('#c-processo');
+              if (cr && fr) cr.value = fr.value;
+              if (cp && fp) cp.value = fp.value;
+              if (cpr && fpr) cpr.value = fpr.value;
+            };
+            const frEl = $('#f-regione'); if (frEl) frEl.addEventListener('change', sync);
+            const fpEl = $('#f-polimero'); if (fpEl) fpEl.addEventListener('change', sync);
+            const fprEl = $('#f-processo'); if (fprEl) fprEl.addEventListener('change', sync);
           });
         },
         renderFiltered() {
-          const regione = $('#f-regione').value || null;
-          const polimero = $('#f-polimero').value || null;
-          const processo = $('#f-processo').value || null;
+          const regione = $('#f-regione') ? $('#f-regione').value || null : null;
+          const polimero = $('#f-polimero') ? $('#f-polimero').value || null : null;
+          const processo = $('#f-processo') ? $('#f-processo').value || null : null;
           const rows = this.raw.filter(r => (
             (!regione || r.Regione === regione) &&
             (!polimero || r.Polimero === polimero) &&
             (!processo || r.Processo === processo)
           ));
           const body = $('#materials-body');
+          if (!body) return;
           body.innerHTML = '';
           rows.forEach(r => {
             const tr = document.createElement('tr');
@@ -435,7 +445,8 @@
             `;
             body.appendChild(tr);
           });
-          $('#materials-empty').classList.toggle('hidden-vis', rows.length !== 0);
+          const empty = $('#materials-empty');
+          if (empty) empty.classList.toggle('hidden-vis', rows.length !== 0);
         }
       };
 
@@ -446,7 +457,7 @@
           const form = e.currentTarget;
           const status = $('#contact-status');
           status.textContent = 'Invio in corso…';
-          $('#btn-send').disabled = true;
+          const btn = $('#btn-send'); if (btn) btn.disabled = true;
 
           try {
             // Read form values
@@ -461,7 +472,7 @@
             };
 
             // Upload files to Supabase Storage
-            const files = $('#c-file').files;
+            const files = $('#c-file') ? $('#c-file').files : [];
             const uploadedUrls = [];
             if (files && files.length) {
               for (const file of files) {
@@ -487,25 +498,21 @@
             const netlifyFD = new FormData();
             netlifyFD.append('form-name', 'contatti');
             for (const [k,v] of Object.entries(payload)) netlifyFD.append(k, v);
-            // Attach files to Netlify as well
             if (files && files.length) {
               for (const file of files) netlifyFD.append('allegati', file, file.name);
             }
-            // Also include Supabase uploaded URLs so they show up in admin
             uploadedUrls.forEach((u, i) => netlifyFD.append(`supabase_image_url_${i+1}`, u));
 
             await fetch('/', { method: 'POST', body: netlifyFD });
 
-            // UX
             status.textContent = 'Grazie! Messaggio inviato.';
             form.reset();
-            // Keep contact selects mirroring filters
             Materials.mirrorFiltersIntoContactForm();
           } catch (err) {
             console.error(err);
             status.textContent = 'Si è verificato un errore durante l\'invio.';
           } finally {
-            $('#btn-send').disabled = false;
+            const btn2 = $('#btn-send'); if (btn2) btn2.disabled = false;
           }
         }
       };
