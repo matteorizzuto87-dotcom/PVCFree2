@@ -1,385 +1,456 @@
 <!doctype html>
 <html lang="it">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PVCFree — Contatti & Database Materiali</title>
-  <meta name="color-scheme" content="dark light">
-  <style>
-    :root{--bg:#0c0f16;--panel:#121724;--muted:#9aa3b2;--text:#e8ecf4;--brand:#6aa5ff;--ok:#17c964;--warn:#ffaa00}
-    *{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial}
-    a{color:var(--brand);text-decoration:none}
-    .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
-    .tabs{display:flex;gap:8px;margin-bottom:16px}
-    .tab-btn{padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:#0f1322;color:var(--text);cursor:pointer}
-    .tab-btn.active{background:var(--brand);color:#0b0d12;border-color:var(--brand)}
-    .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.00));border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px}
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
-    .field{display:flex;flex-direction:column;gap:6px}
-    .field input,.field select,.field textarea{padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#121724;color:var(--text)}
-    .btn{padding:10px 14px;border-radius:12px;border:0;background:var(--brand);color:#0b0d12;font-weight:700;cursor:pointer}
-    .btn.secondary{background:#1b2135;color:var(--text);border:1px solid rgba(255,255,255,.12)}
-    .btn.warn{background:var(--warn);color:#0b0d12}
-    .muted{color:var(--muted)}
-    .section{display:none}
-    .section.active{display:block}
-    .table-wrap{overflow:auto;border-radius:12px;border:1px solid rgba(255,255,255,.08);margin-top:12px}
-    table{width:100%;border-collapse:separate;border-spacing:0}
-    thead th{position:sticky;top:0;background:#11152a;text-align:left;padding:10px;border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap}
-    tbody td{padding:10px;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px;vertical-align:top}
-    tbody tr:hover{background:rgba(255,255,255,.03)}
-    .pill{background:#1a2138;color:var(--text);border:1px solid rgba(255,255,255,.12);padding:2px 8px;border-radius:999px;font-size:12px}
-    .tools{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <h1>PVCFree</h1>
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="contatti">Contatti</button>
-      <button class="tab-btn" data-tab="db">Database Materiali</button>
-      <a class="tab-btn" href="contatti-admin.html" target="_blank" rel="noopener">Admin (📎 & Excel)</a>
-    </div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PVCFree — Database materiali & Contatti</title>
 
-    <!-- ================== CONTATTI ================== -->
-    <section id="contatti" class="section active">
-      <div class="card">
-        <h2>Nuovo contatto</h2>
-        <p class="muted">Compila e premi <strong>Aggiungi contatto</strong>. Verrà salvato nella tabella qui sotto e inviato anche a Netlify Forms (per gestire gli allegati e l'export Excel).</p>
-        <div class="grid" style="margin-top:8px">
-          <div class="field" style="grid-column: span 4;">
-            <label for="azienda">Azienda</label>
-            <input id="azienda" placeholder="Ragione sociale">
-          </div>
-          <div class="field" style="grid-column: span 4;">
-            <label for="email">Email</label>
-            <input id="email" type="email" placeholder="nome@azienda.com">
-          </div>
-          <div class="field" style="grid-column: span 4;">
-            <label for="categoria">Categoria</label>
-            <select id="categoria">
-              <option>Cliente</option>
-              <option>Fornitore</option>
-              <option>Partner</option>
-              <option>Altro</option>
-            </select>
-          </div>
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-          <div class="field" style="grid-column: span 4;">
-            <label for="regione">Regione / Paese</label>
-            <input id="regione" placeholder="es. Lombardia / IT">
-          </div>
-          <div class="field" style="grid-column: span 4;">
-            <label for="polimero">Polimero</label>
-            <input id="polimero" placeholder="es. BIO / TPE-S">
-          </div>
-          <div class="field" style="grid-column: span 4;">
-            <label for="processo">Processo</label>
-            <input id="processo" placeholder="es. Stampaggio, Estrusione…">
-          </div>
+    <!-- Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      html, body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, Noto Sans, sans-serif; }
+      .card { @apply bg-white rounded-2xl shadow-md border border-slate-100; }
+      .btn  { @apply inline-flex items-center justify-center px-4 py-2 rounded-xl font-medium shadow-sm border border-slate-200 hover:shadow transition; }
+      .btn-primary { @apply bg-black text-white hover:bg-slate-800; }
+      .input { @apply w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400; }
+      .label { @apply block text-sm font-medium text-slate-700 mb-1; }
+      .badge { @apply inline-flex items-center px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium; }
+      .hidden-vis { display:none; }
+    </style>
 
-          <div class="field" style="grid-column: span 12;">
-            <label for="note">Note</label>
-            <textarea id="note" rows="4" placeholder="Note, richieste specifiche, applicazioni…"></textarea>
-          </div>
+    <!-- Supabase JS v2 (CDN) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-          <div class="field" style="grid-column: span 6;">
-            <label for="immagini">Immagini (JPG/PNG/WEBP/GIF)</label>
-            <input id="immagini" type="file" accept="image/*">
-          </div>
+    <!-- PapaParse for CSV (auto delimiter) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+    <!-- ENV placeholders (replace or set here) -->
+    <!-- Option A: edit content of these metas; Option B: override at runtime with window.ENV in a separate script. -->
+    <meta name="supabase-url" content="YOUR_SUPABASE_URL" />
+    <meta name="supabase-anon-key" content="YOUR_SUPABASE_ANON_KEY" />
+
+    <!-- Basic theming -->
+    <meta name="theme-color" content="#000000"/>
+  </head>
+  <body class="bg-slate-50 min-h-screen">
+    <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-slate-200">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+        <div class="flex items-center gap-3">
+          <img src="/assets/logo.svg" alt="PVCFree" class="h-8 w-8" onerror="this.style.display='none'" />
+          <span class="text-lg font-semibold">PVCFree</span>
+          <span class="badge">pvcfree2</span>
         </div>
-
-        <div class="tools">
-          <button id="btn-add-contact" class="btn">Aggiungi contatto</button>
-          <button id="btn-reset" class="btn secondary">Reset modulo</button>
-        </div>
-
-        <div class="table-wrap">
-          <table id="tbl-contatti">
-            <thead>
-              <tr>
-                <th>Azienda</th><th>Email</th><th>Categoria</th><th>Regione</th>
-                <th>Polimero</th><th>Processo</th><th>Note</th><th>Immagine</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
+        <nav class="flex items-center gap-2">
+          <button id="btn-login-header" class="btn" onclick="UI.showAuth()">Accedi</button>
+          <button id="btn-logout" class="btn" onclick="Auth.logout()" style="display:none">Esci</button>
+        </nav>
       </div>
-    </section>
+    </header>
 
-    <!-- ================== DATABASE MATERIALI ================== -->
-    <section id="db" class="section">
-      <div class="card">
-        <h2>Database Materiali</h2>
-        <p class="muted">Filtra per <strong>Tipologia polimero</strong>, <strong>Applicazione</strong> e <strong>Durezza (ShA)</strong>. La tabella mostra le proprietà principali.</p>
+    <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Access Gate / Auth Card -->
+      <section id="auth-section" class="grid place-items-center min-h-[40vh]">
+        <div class="card w-full max-w-md p-6">
+          <div class="mb-4 text-center">
+            <h1 class="text-2xl font-semibold">Accedi a PVCFree</h1>
+            <p class="text-slate-600">Email & password (Supabase Auth)</p>
+          </div>
+          <form id="auth-form" class="space-y-4">
+            <div>
+              <label class="label" for="auth-email">Email</label>
+              <input id="auth-email" name="email" type="email" class="input" placeholder="nome@azienda.it" required />
+            </div>
+            <div>
+              <label class="label" for="auth-password">Password</label>
+              <input id="auth-password" name="password" type="password" class="input" placeholder="••••••••" required />
+            </div>
+            <div class="flex items-center justify-between gap-2">
+              <button type="submit" class="btn btn-primary w-full" id="btn-login">Accedi</button>
+              <button type="button" class="btn w-full" id="btn-register">Registrati</button>
+            </div>
+            <p id="auth-message" class="text-sm text-slate-600"></p>
+          </form>
+        </div>
+      </section>
 
-        <div class="grid" style="margin-top:8px">
-          <div class="field" style="grid-column: span 4;">
-            <label>Tipologia polimero</label>
-            <select id="f-tipologia"><option value="">Tutte</option></select>
+      <!-- App Section (visible after login) -->
+      <section id="app-section" class="space-y-8" style="display:none">
+        <!-- Filters + Materials DB -->
+        <div class="card p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold">Database materiali</h2>
+            <span class="text-sm text-slate-500">Sorgente: <code>/data/materiali_database.csv</code></span>
           </div>
-          <div class="field" style="grid-column: span 4;">
-            <label>Applicazione</label>
-            <select id="f-app"><option value="">Tutte</option></select>
-          </div>
-          <div class="field" style="grid-column: span 4;">
-            <label>Durezza (ShA) — intervallo</label>
-            <div class="grid" style="grid-template-columns:1fr 1fr; gap:8px">
-              <input id="f-min" placeholder="min">
-              <input id="f-max" placeholder="max">
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label class="label" for="f-regione">Regione</label>
+              <select id="f-regione" class="input"></select>
+            </div>
+            <div>
+              <label class="label" for="f-polimero">Polimero</label>
+              <select id="f-polimero" class="input"></select>
+            </div>
+            <div>
+              <label class="label" for="f-processo">Processo</label>
+              <select id="f-processo" class="input"></select>
             </div>
           </div>
+
+          <div class="overflow-auto border border-slate-200 rounded-xl">
+            <table id="materials-table" class="min-w-full text-sm">
+              <thead class="bg-slate-100 text-slate-700">
+                <tr>
+                  <th class="text-left px-3 py-2">Regione</th>
+                  <th class="text-left px-3 py-2">Polimero</th>
+                  <th class="text-left px-3 py-2">Processo</th>
+                  <th class="text-left px-3 py-2">Materiale</th>
+                  <th class="text-left px-3 py-2">Note</th>
+                </tr>
+              </thead>
+              <tbody id="materials-body" class="divide-y divide-slate-100 bg-white"></tbody>
+            </table>
+          </div>
+
+          <div id="materials-empty" class="hidden-vis mt-3 text-sm text-slate-600">Nessun record corrispondente ai filtri.</div>
         </div>
 
-        <div class="tools">
-          <button id="btn-apply" class="btn">Applica</button>
-          <button id="btn-reset-db" class="btn secondary">Reset</button>
-          <button id="btn-export-db" class="btn secondary">Esporta CSV</button>
-          <span id="db-meta" class="muted" style="align-self:center"></span>
+        <!-- Contacts / Parallel submission: Supabase + Netlify Forms -->
+        <div class="card p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold">Contatti</h2>
+            <span class="badge">Doppio flusso: Supabase + Netlify Forms</span>
+          </div>
+
+          <!-- IMPORTANT: The form must be present at build time for Netlify detection -->
+          <form id="contact-form" name="contatti" method="POST" data-netlify="true" netlify-honeypot="bot-field" enctype="multipart/form-data" class="space-y-4">
+            <!-- Netlify Forms require this hidden form-name -->
+            <input type="hidden" name="form-name" value="contatti" />
+            <p class="hidden">
+              <label>Non compilare questo campo: <input name="bot-field" /></label>
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="label" for="c-nome">Nome e cognome</label>
+                <input id="c-nome" name="nome" class="input" placeholder="Mario Rossi" required />
+              </div>
+              <div>
+                <label class="label" for="c-email">Email</label>
+                <input id="c-email" name="email" type="email" class="input" placeholder="nome@azienda.it" required />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="label" for="c-regione">Regione</label>
+                <select id="c-regione" name="regione" class="input"></select>
+              </div>
+              <div>
+                <label class="label" for="c-polimero">Polimero</label>
+                <select id="c-polimero" name="polimero" class="input"></select>
+              </div>
+              <div>
+                <label class="label" for="c-processo">Processo</label>
+                <select id="c-processo" name="processo" class="input"></select>
+              </div>
+            </div>
+
+            <div>
+              <label class="label" for="c-messaggio">Messaggio</label>
+              <textarea id="c-messaggio" name="messaggio" class="input" rows="4" placeholder="Scrivi qui..." required></textarea>
+            </div>
+
+            <div>
+              <label class="label" for="c-file">Allegati (immagini)</label>
+              <input id="c-file" name="allegati" type="file" accept="image/*" multiple class="input" />
+              <p class="text-xs text-slate-500 mt-1">Le immagini saranno caricate su Supabase Storage (<code>contact-images</code>) e inviate anche a Netlify Forms.</p>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <button type="submit" class="btn btn-primary" id="btn-send">Invia</button>
+              <span id="contact-status" class="text-sm text-slate-600"></span>
+            </div>
+          </form>
         </div>
+      </section>
+    </main>
 
-        <div class="table-wrap">
-          <table id="tbl-db">
-            <thead>
-              <tr>
-                <th>Sigla</th><th>Processo</th><th>regulation</th>
-                <th>Peso Specifico (g/cm3) ISO 1183-1</th>
-                <th>Carico di Rottura (N/mm2) ISO 527</th>
-                <th>Allungamento a Rottura (N/mm2) ISO 527</th>
-                <th>Compression Set (ASTM D 395) (22°C/72h)</th>
-                <th>special features</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-  </div>
+    <footer class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 text-slate-500 text-sm">
+      <p>© <span id="year"></span> PVCFree • Netlify + Supabase</p>
+    </footer>
 
-  <!-- ====== Form "fantasma" per Netlify (rilevamento + upload) ====== -->
-  <form id="nl-contatti" name="contatti"
-        method="POST" data-netlify="true"
-        netlify-honeypot="bot-field"
-        enctype="multipart/form-data" hidden>
-    <input type="hidden" name="form-name" value="contatti">
-    <!-- campi verranno compilati via JS -->
-    <input type="text"   name="nome"      hidden>
-    <input type="email"  name="email"     hidden>
-    <textarea name="messaggio"            hidden></textarea>
-    <!-- l'allegato lo inviamo con fetch/FormData -->
-  </form>
-
-  <script>
-  // ====== Tabs
-  document.querySelectorAll('.tab-btn').forEach(b=>{
-    b.addEventListener('click',()=>{
-      const tab=b.dataset.tab; if(!tab) return;
-      document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
-      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-      b.classList.add('active'); document.getElementById(tab).classList.add('active');
-    });
-  });
-
-  // ====== CONTATTI (tab)
-  const qs = s=>document.querySelector(s);
-  const $tbodyContatti = qs('#tbl-contatti tbody');
-
-  function addRowContatto(row){
-    const tr=document.createElement('tr');
-    tr.innerHTML = `
-      <td>${row.azienda||''}</td>
-      <td>${row.email||''}</td>
-      <td>${row.categoria||''}</td>
-      <td>${row.regione||''}</td>
-      <td>${row.polimero||''}</td>
-      <td>${row.processo||''}</td>
-      <td>${(row.note||'').replace(/</g,'&lt;')}</td>
-      <td>${row.imgName? `<span class="pill">${row.imgName}</span>`:'—'}</td>`;
-    $tbodyContatti.prepend(tr);
-  }
-
-  async function inviaA_Netlify({ nome, email, messaggio, file }) {
-    try {
-      // compilo anche gli input del form fantasma (facoltativo ma utile)
-      const frm = document.getElementById('nl-contatti');
-      frm.querySelector('input[name="nome"]').value = nome || '';
-      frm.querySelector('input[name="email"]').value = email || '';
-      frm.querySelector('textarea[name="messaggio"]').value = messaggio || '';
-
-      // invio via fetch con FormData (così includo file)
-      const fd = new FormData(frm);
-      if (file) fd.append('allegato', file);
-      await fetch('/', { method: 'POST', body: fd });
-      console.log('Inviato a Netlify');
-    } catch (e) { console.error('Netlify form error:', e); }
-  }
-
-  qs('#btn-add-contact').addEventListener('click', async ()=>{
-    const row = {
-      azienda : qs('#azienda').value.trim(),
-      email   : qs('#email').value.trim(),
-      categoria: qs('#categoria').value,
-      regione : qs('#regione').value.trim(),
-      polimero: qs('#polimero').value.trim(),
-      processo: qs('#processo').value.trim(),
-      note    : qs('#note').value.trim(),
-    };
-    const file = qs('#immagini').files && qs('#immagini').files[0] ? qs('#immagini').files[0] : null;
-    row.imgName = file ? file.name : '';
-
-    // 1) aggiungo alla tabella locale
-    addRowContatto(row);
-
-    // 2) invio in parallelo a Netlify (per allegati + admin)
-    await inviaA_Netlify({ nome: row.azienda, email: row.email, messaggio: row.note, file });
-
-    // 3) reset campi base (lascia l'upload)
-    // (se vuoi reset anche file, scommenta la riga)
-    // qs('#immagini').value = '';
-  });
-
-  qs('#btn-reset').addEventListener('click', ()=>{
-    ['azienda','email','regione','polimero','processo','note'].forEach(id=>qs('#'+id).value='');
-    qs('#categoria').selectedIndex=0;
-    qs('#immagini').value='';
-  });
-
-  // ====== DATABASE MATERIALI
-  const DB = { rows:[], headers:[], idx:{} };
-
-  function parseCSV(text){
-    // normalizza CRLF
-    const lines = text.replace(/\r\n/g,'\n').split('\n').filter(l=>l.trim().length);
-    // rimuovi eventuale riga "DATI di INPUT;...;DATI di OUTPUT..."
-    if (/^ *DATI.+OUTPUT/i.test(lines[0])) lines.shift();
-
-    const sep = ';'; // il tuo CSV usa ; come separatore
-    const headers = lines[0].split(sep).map(h=>h.trim());
-    const rows = lines.slice(1).map(line=>{
-      const cells = line.split(sep);
-      const obj = {};
-      headers.forEach((h,i)=>obj[h]= (cells[i]??'').trim());
-      return obj;
-    });
-    return { headers, rows };
-  }
-
-  async function loadCSV(){
-    const urls = [
-      '/data/materiali_database.csv',
-      './data/materiali_database.csv',
-      'data/materiali_database.csv'
-    ];
-    let txt=null, used=null;
-    for (const u of urls){
-      try{
-        const r = await fetch(`${u}?v=${Date.now()}`);
-        if (r.ok){ txt = await r.text(); used = u; break; }
-      }catch{}
-    }
-    if (!txt) throw new Error('CSV non trovato nelle path /data, ./data, data');
-    console.log('CSV caricato da:', used);
-    const {headers, rows} = parseCSV(txt);
-    // mappa nomi colonne attese (adatta ai tuoi header reali)
-    DB.headers = headers;
-    DB.rows = rows.map(r=>{
-      return {
-        tipologia: r['Tipologia polimero']||'',
-        applicazione: r['Applicazione']||'',
-        durezza: (r['Durezza (ShA) - ISO 868']||'').replace(/[^\d.]/g,''),
-        sigla: r['Sigla']||'',
-        processo: r['Processo']||r['Processo ']||'',
-        regulation: r['regulation']||'',
-        densita: r['Peso Specifico (g/cm3) ISO 1183-1']||'',
-        carico: r['Carico di Rottura (N/mm2) ISO 527']||'',
-        allung: r['Allungamento a Rottura (N/mm2) ISO 527']||'',
-        cset: r['Compression Set  (ASTM D 395) ( 22°C/72h)']||r['Compression Set (ASTM D 395) (22°C/72h)']||'',
-        features: r['special features']||''
+    <script>
+      // ========= Config =========
+      const META = {
+        url: document.querySelector('meta[name="supabase-url"]').getAttribute('content'),
+        key: document.querySelector('meta[name="supabase-anon-key"]').getAttribute('content')
       };
-    });
-    buildFilters();
-    renderDB(DB.rows);
-  }
+      const SUPABASE_URL = (window.ENV && window.ENV.SUPABASE_URL) || META.url;
+      const SUPABASE_ANON_KEY = (window.ENV && window.ENV.SUPABASE_ANON_KEY) || META.key;
 
-  function uniq(arr){ return [...new Set(arr.filter(Boolean))].sort(); }
+      const BUCKET = 'contact-images';
+      const CONTACTS_TABLE = 'contacts';
+      const MATERIALS_CSV = '/data/materiali_database.csv';
 
-  function buildFilters(){
-    const tip = uniq(DB.rows.map(r=>r.tipologia));
-    const app = uniq(DB.rows.map(r=>r.applicazione));
-    const $tip = qs('#f-tipologia'), $app = qs('#f-app');
-    tip.forEach(v=>{ const o=document.createElement('option'); o.value=v;o.textContent=v;$tip.appendChild(o); });
-    app.forEach(v=>{ const o=document.createElement('option'); o.value=v;o.textContent=v;$app.appendChild(o); });
-  }
+      // ========= DOM helpers =========
+      const $ = (sel) => document.querySelector(sel);
+      const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-  function renderDB(rows){
-    const tb = qs('#tbl-db tbody'); tb.innerHTML='';
-    rows.forEach(r=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML = `
-        <td>${r.sigla}</td>
-        <td>${r.processo}</td>
-        <td>${r.regulation}</td>
-        <td>${r.densita}</td>
-        <td>${r.carico}</td>
-        <td>${r.allung}</td>
-        <td>${r.cset}</td>
-        <td>${r.features}</td>`;
-      tb.appendChild(tr);
-    });
-    qs('#db-meta').textContent = `${rows.length} risultati`;
-  }
+      const UI = {
+        showAuth() { $('#auth-section').style.display = 'grid'; $('#app-section').style.display = 'none'; $('#btn-login-header').style.display=''; $('#btn-logout').style.display='none'; },
+        showApp()  { $('#auth-section').style.display = 'none'; $('#app-section').style.display = 'block'; $('#btn-login-header').style.display='none'; $('#btn-logout').style.display=''; }
+      };
 
-  function applyFilters(){
-    const tip = qs('#f-tipologia').value;
-    const app = qs('#f-app').value;
-    const min = parseFloat(qs('#f-min').value.replace(',','.')) || -Infinity;
-    const max = parseFloat(qs('#f-max').value.replace(',','.')) || Infinity;
+      // ========= Supabase init =========
+      let supabaseClient;
+      document.addEventListener('DOMContentLoaded', async () => {
+        document.getElementById('year').textContent = new Date().getFullYear();
 
-    const out = DB.rows.filter(r=>{
-      if (tip && r.tipologia !== tip) return false;
-      if (app && r.applicazione !== app) return false;
-      const d = parseFloat((r.durezza||'').toString().replace(',','.'));
-      if (!isNaN(d)) {
-        if (d < min) return false;
-        if (d > max) return false;
-      } else {
-        // se non numerico, passa solo se range è "aperto"
-        if (isFinite(min) || isFinite(max)) return false;
-      }
-      return true;
-    });
-    renderDB(out);
-  }
+        if (!window.supabase) {
+          console.error('Supabase SDK non caricato');
+          return;
+        }
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  function exportCSV(rows){
-    const headers = ['Sigla','Processo','regulation','Peso Specifico (g/cm3) ISO 1183-1','Carico di Rottura (N/mm2) ISO 527','Allungamento a Rottura (N/mm2) ISO 527','Compression Set (ASTM D 395) (22°C/72h)','special features'];
-    const lines = [headers.join(';')].concat(rows.map(r=>[
-      r.sigla,r.processo,r.regulation,r.densita,r.carico,r.allung,r.cset,r.features
-    ].map(v=>String(v).replace(/;/g,',')).join(';')));
-    const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8'});
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='materiali_filtrati.csv'; a.click();
-  }
+        // Session check
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+          UI.showApp();
+          App.initAfterLogin(session);
+        } else {
+          UI.showAuth();
+        }
 
-  qs('#btn-apply').addEventListener('click', applyFilters);
-  qs('#btn-reset-db').addEventListener('click', ()=>{
-    ['#f-tipologia','#f-app','#f-min','#f-max'].forEach(s=>{ const el=qs(s); if(el.tagName==='SELECT') el.selectedIndex=0; else el.value=''; });
-    renderDB(DB.rows);
-  });
-  qs('#btn-export-db').addEventListener('click', ()=> exportCSV(Array.from(qs('#tbl-db tbody').children).map(tr=>{
-    const tds = tr.querySelectorAll('td'); return {
-      sigla: tds[0].textContent, processo: tds[1].textContent, regulation: tds[2].textContent,
-      densita: tds[3].textContent, carico: tds[4].textContent, allung: tds[5].textContent,
-      cset: tds[6].textContent, features: tds[7].textContent
-    };
-  })));
+        // Auth state listener
+        supabaseClient.auth.onAuthStateChange((_event, session) => {
+          if (session) {
+            UI.showApp();
+            App.initAfterLogin(session);
+          } else {
+            UI.showAuth();
+          }
+        });
 
-  // INIT
-  (async function init(){
-    try { await loadCSV(); } 
-    catch(e){ console.error(e); qs('#db-meta').textContent = 'Errore: ' + e.message; }
-  })();
-  </script>
-</body>
+        Auth.mount();
+        App.mount();
+      });
+
+      // ========= Auth =========
+      const Auth = {
+        mount() {
+          const form = $('#auth-form');
+          form.addEventListener('submit', Auth.login);
+          $('#btn-register').addEventListener('click', Auth.register);
+        },
+        async login(e) {
+          e.preventDefault();
+          $('#auth-message').textContent = 'Accesso in corso…';
+          const email = $('#auth-email').value.trim();
+          const password = $('#auth-password').value;
+          const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+          if (error) {
+            $('#auth-message').textContent = 'Errore: ' + error.message;
+          } else {
+            $('#auth-message').textContent = '';
+          }
+        },
+        async register() {
+          $('#auth-message').textContent = 'Registrazione in corso…';
+          const email = $('#auth-email').value.trim();
+          const password = $('#auth-password').value;
+          const { error } = await supabaseClient.auth.signUp({ email, password });
+          if (error) {
+            $('#auth-message').textContent = 'Errore: ' + error.message;
+          } else {
+            $('#auth-message').textContent = 'Registrazione effettuata. Controlla la tua email (se previsto) e poi accedi.';
+          }
+        },
+        async logout() {
+          await supabaseClient.auth.signOut();
+        }
+      };
+
+      // ========= App (after login) =========
+      const App = {
+        didInit: false,
+        async initAfterLogin(session) {
+          if (this.didInit) return;
+          this.didInit = true;
+          // Load filters + table
+          await Materials.load();
+          // Mirror filter values into contact form selects
+          Materials.mirrorFiltersIntoContactForm();
+        },
+        mount() {
+          // Materials filters
+          $('#f-regione').addEventListener('change', Materials.renderFiltered);
+          $('#f-polimero').addEventListener('change', Materials.renderFiltered);
+          $('#f-processo').addEventListener('change', Materials.renderFiltered);
+
+          // Contact form submit
+          $('#contact-form').addEventListener('submit', Contacts.handleSubmit);
+        }
+      };
+
+      // ========= Materials DB =========
+      const Materials = {
+        raw: [],
+        unique(field) {
+          const vals = new Set(this.raw.map(r => (r[field] || '').trim()).filter(Boolean));
+          return ['Tutte', ...Array.from(vals).sort((a,b)=>a.localeCompare(b))];
+        },
+        async load() {
+          try {
+            const res = await fetch(MATERIALS_CSV, { cache: 'no-store' });
+            const text = await res.text();
+            const parsed = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: false });
+            this.raw = parsed.data.map(r => ({
+              Regione: r.Regione || r.regione || r.Region || '',
+              Polimero: r.Polimero || r.polimero || r.Polymer || '',
+              Processo: r.Processo || r.processo || r.Process || '',
+              Materiale: r.Materiale || r.materiale || r.Material || '',
+              Note: r.Note || r.note || ''
+            }));
+
+            // Populate filters
+            Materials.populateSelect('#f-regione', this.unique('Regione'));
+            Materials.populateSelect('#f-polimero', this.unique('Polimero'));
+            Materials.populateSelect('#f-processo', this.unique('Processo'));
+            Materials.renderFiltered();
+
+            // Also populate contact selects
+            Materials.populateSelect('#c-regione', this.unique('Regione'));
+            Materials.populateSelect('#c-polimero', this.unique('Polimero'));
+            Materials.populateSelect('#c-processo', this.unique('Processo'));
+          } catch (err) {
+            console.error('Errore caricamento CSV:', err);
+          }
+        },
+        populateSelect(sel, options) {
+          const el = $(sel);
+          el.innerHTML = '';
+          options.forEach(opt => {
+            const o = document.createElement('option');
+            o.value = opt === 'Tutte' ? '' : opt;
+            o.textContent = opt;
+            el.appendChild(o);
+          });
+        },
+        mirrorFiltersIntoContactForm() {
+          $('#c-regione').value = $('#f-regione').value;
+          $('#c-polimero').value = $('#f-polimero').value;
+          $('#c-processo').value = $('#f-processo').value;
+          ['#f-regione','#f-polimero','#f-processo'].forEach((id, idx) => {
+            $(id).addEventListener('change', () => {
+              ['#c-regione','#c-polimero','#c-processo'][idx] &&
+              ($('#c-regione').value = $('#f-regione').value,
+               $('#c-polimero').value = $('#f-polimero').value,
+               $('#c-processo').value = $('#f-processo').value);
+            });
+          });
+        },
+        renderFiltered() {
+          const regione = $('#f-regione').value || null;
+          const polimero = $('#f-polimero').value || null;
+          const processo = $('#f-processo').value || null;
+          const rows = this.raw.filter(r => (
+            (!regione || r.Regione === regione) &&
+            (!polimero || r.Polimero === polimero) &&
+            (!processo || r.Processo === processo)
+          ));
+          const body = $('#materials-body');
+          body.innerHTML = '';
+          rows.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td class="px-3 py-2">${r.Regione}</td>
+              <td class="px-3 py-2">${r.Polimero}</td>
+              <td class="px-3 py-2">${r.Processo}</td>
+              <td class="px-3 py-2">${r.Materiale}</td>
+              <td class="px-3 py-2">${r.Note}</td>
+            `;
+            body.appendChild(tr);
+          });
+          $('#materials-empty').classList.toggle('hidden-vis', rows.length !== 0);
+        }
+      };
+
+      // ========= Contacts (dual flow) =========
+      const Contacts = {
+        async handleSubmit(e) {
+          e.preventDefault();
+          const form = e.currentTarget;
+          const status = $('#contact-status');
+          status.textContent = 'Invio in corso…';
+          $('#btn-send').disabled = true;
+
+          try {
+            // Read form values
+            const fd = new FormData(form);
+            const payload = {
+              nome: fd.get('nome')?.toString().trim() || '',
+              email: fd.get('email')?.toString().trim() || '',
+              regione: fd.get('regione')?.toString() || '',
+              polimero: fd.get('polimero')?.toString() || '',
+              processo: fd.get('processo')?.toString() || '',
+              messaggio: fd.get('messaggio')?.toString().trim() || ''
+            };
+
+            // Upload files to Supabase Storage
+            const files = $('#c-file').files;
+            const uploadedUrls = [];
+            if (files && files.length) {
+              for (const file of files) {
+                const path = `${Date.now()}_${Math.random().toString(36).slice(2)}_${file.name}`;
+                const { data, error } = await supabaseClient
+                  .storage.from(BUCKET)
+                  .upload(path, file, { contentType: file.type, upsert: false });
+                if (error) { console.warn('Upload errore:', error.message); continue; }
+                const { data: pub } = supabaseClient
+                  .storage.from(BUCKET)
+                  .getPublicUrl(data.path);
+                if (pub && pub.publicUrl) uploadedUrls.push(pub.publicUrl);
+              }
+            }
+
+            // Insert contact row in Supabase
+            const { error: insertError } = await supabaseClient
+              .from(CONTACTS_TABLE)
+              .insert([{ ...payload, image_urls: uploadedUrls, created_at: new Date().toISOString() }]);
+            if (insertError) console.warn('Insert errore:', insertError.message);
+
+            // Parallel submit to Netlify Forms (include the same files)
+            const netlifyFD = new FormData();
+            netlifyFD.append('form-name', 'contatti');
+            for (const [k,v] of Object.entries(payload)) netlifyFD.append(k, v);
+            // Attach files to Netlify as well
+            if (files && files.length) {
+              for (const file of files) netlifyFD.append('allegati', file, file.name);
+            }
+            // Also include Supabase uploaded URLs so they show up in admin
+            uploadedUrls.forEach((u, i) => netlifyFD.append(`supabase_image_url_${i+1}`, u));
+
+            await fetch('/', { method: 'POST', body: netlifyFD });
+
+            // UX
+            status.textContent = 'Grazie! Messaggio inviato.';
+            form.reset();
+            // Keep contact selects mirroring filters
+            Materials.mirrorFiltersIntoContactForm();
+          } catch (err) {
+            console.error(err);
+            status.textContent = 'Si è verificato un errore durante l\'invio.';
+          } finally {
+            $('#btn-send').disabled = false;
+          }
+        }
+      };
+    </script>
+  </body>
 </html>
