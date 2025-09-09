@@ -1,4 +1,4 @@
-// netlify/functions/get-submissions.js
+// github/netlify/functions/get-submissions.js
 export async function handler(event, context) {
   const headers = {
     "Access-Control-Allow-Origin": "*",
@@ -6,40 +6,91 @@ export async function handler(event, context) {
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Content-Type": "application/json; charset=utf-8"
   };
-  if (event.httpMethod === "OPTIONS") { return { statusCode: 204, headers }; }
+  if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers };
 
   const token = process.env.NETLIFY_TOKEN;
-  const siteId = process.env.NETLIFY_SITE_ID;
+  const siteHint = (process.env.NETLIFY_SITE_ID || "").trim();   // può essere nome o id
   const formName = (process.env.FORM_NAME || "contatti").toLowerCase();
   const per_page = Math.min(parseInt((event.queryStringParameters && event.queryStringParameters.per_page) || "1000", 10), 1000);
   const page = parseInt((event.queryStringParameters && event.queryStringParameters.page) || "1", 10);
 
-  if (!token || !siteId) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: "Missing NETLIFY_TOKEN or NETLIFY_SITE_ID env vars." }) };
-  }
+  if (!token) return { statusCode: 500, headers, body: JSON.stringify({ error: "Missing NETLIFY_TOKEN env var." }) };
 
   const base = "https://api.netlify.com/api/v1";
+  const api = (path, opts={}) => fetch(base + path, { headers: { Authorization: `Bearer ${token}` }, ...opts });
+
+  async function resolveSite() {
+    // 1) Prova diretta con hint (nome o id)
+    if (siteHint) {
+      const r = await api(`/sites/${siteHint}`);
+      if (r.ok) return await r.json();
+    }
+    // 2) Risolvi dal dominio richiesto (es. pvcfree2.netlify.app)
+    const host = (event.headers?.host || "").split(":")[0];
+    if (host) {
+      const rs = await api(`/sites`);
+      if (rs.ok) {
+        const sites = await rs.json();
+        const found = sites.find(s =>
+          s.ssl_url?.includes(host) || s.url?.includes(host) ||
+          s.name === siteHint || s.name === host.split(".")[0]
+        );
+        if (found) return found;
+      }
+    }
+    // 3) Ultimo tentativo: lista siti e cerca per hint
+    if (siteHint) {
+      const rs = await api(`/sites`);
+      if (rs.ok) {
+        const sites = await rs.json();
+        const found = sites.find(s => s.name === siteHint || s.id === siteHint);
+        if (found) return found;
+      }
+    }
+    throw new Error(`Cannot resolve site (hint='${siteHint || "none"}').`);
+  }
+
   try {
-    const formsRes = await fetch(`${base}/sites/${siteId}/forms`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!formsRes.ok) { const t = await formsRes.text(); throw new Error(`List forms failed: ${formsRes.status} ${t}`); }
-    const forms = await formsRes.json();
-    const form = forms.find(f => (f.name || "").toLowerCase() === formName);
-    if (!form) {
-      return { statusCode: 404, headers, body: JSON.stringify({ error: `Form '${formName}' not found on site ${siteId}`, forms: forms.map(f=>({id:f.id,name:f.name})) }) };
+    const site = await resolveSite();
+
+    // prendi i forms del sito (con fallback)
+    let formsRes = await api(`/sites/${site.id}/forms`);
+    let forms;
+    if (formsRes.ok) {
+      forms = await formsRes.json();
+    } else {
+      const allRes = await api(`/forms`);
+      if (!allRes.ok) {
+        const t = await allRes.text();
+        throw new Error(`List forms fallback failed: ${allRes.status} ${t}`);
+      }
+      const all = await allRes.json();
+      forms = all.filter(f => f.site_id === site.id);
+      if (!forms.length) {
+        return { statusCode: 404, headers, body: JSON.stringify({ error: `No forms found for site ${site.name} (${site.id})` }) };
+      }
     }
 
-    const subsRes = await fetch(`${base}/forms/${form.id}/submissions?per_page=${per_page}&page=${page}`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!subsRes.ok) { const t = await subsRes.text(); throw new Error(`List submissions failed: ${subsRes.status} ${t}`); }
+    const form = forms.find(f => (f.name || "").toLowerCase() === formName) || forms[0];
+    if (!form) {
+      return { statusCode: 404, headers, body: JSON.stringify({ error: `Form '${formName}' not found`, forms: forms.map(f => ({ id: f.id, name: f.name })) }) };
+    }
+
+    const subsRes = await api(`/forms/${form.id}/submissions?per_page=${per_page}&page=${page}`);
+    if (!subsRes.ok) {
+      const t = await subsRes.text();
+      throw new Error(`List submissions failed: ${subsRes.status} ${t}`);
+    }
     const raw = await subsRes.json();
 
     const norm = raw.map(s => {
       const d = s.data || {};
       const att = [];
-      if (Array.isArray(s.attachments)) s.attachments.forEach(a => { if (a && a.url) att.push({ url: a.url, name: a.name || a.filename || "file" }); });
-      if (Array.isArray(s.files)) s.files.forEach(a => { if (a && a.url) att.push({ url: a.url, name: a.name || a.filename || "file" }); });
+      (Array.isArray(s.attachments) ? s.attachments : []).forEach(a => { if (a?.url) att.push({ url: a.url, name: a.name || a.filename || "file" }); });
+      (Array.isArray(s.files) ? s.files : []).forEach(a => { if (a?.url) att.push({ url: a.url, name: a.name || a.filename || "file" }); });
       Object.entries(d).forEach(([k,v]) => {
-        const sv = String(v||"");
-        if (/^https?:\/\/.+/.test(sv) && (/\.(png|jpe?g|gif|webp|pdf)(\?|$)/i.test(sv) || sv.includes("/forms/"))) att.push({ url: sv, name: k });
+        const sv = String(v || "");
+        if (/^https?:\/\//.test(sv) && (/\.(png|jpe?g|gif|webp|pdf)(\?|$)/i.test(sv) || sv.includes("/forms/"))) att.push({ url: sv, name: k });
       });
       const seen = new Set();
       const attachments = att.filter(a => { if (!a.url || seen.has(a.url)) return false; seen.add(a.url); return true; });
