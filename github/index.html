@@ -1,486 +1,427 @@
 <!doctype html>
 <html lang="it">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>PVCFree — Database materiali & Contatti</title>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PVCFree — Contatti & Database Materiali</title>
+  <meta name="color-scheme" content="dark light">
+  <style>
+    :root{--bg:#0c0f16;--panel:#121724;--muted:#9aa3b2;--text:#e8ecf4;--brand:#6aa5ff;--ok:#17c964;--warn:#ffaa00}
+    *{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    a{color:var(--brand);text-decoration:none}
+    .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+    .tabs{display:flex;gap:8px;margin-bottom:16px}
+    .tab-btn{padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:#0f1322;color:var(--text);cursor:pointer}
+    .tab-btn.active{background:var(--brand);color:#0b0d12;border-color:var(--brand)}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.00));border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+    .field{display:flex;flex-direction:column;gap:6px}
+    .field input,.field select,.field textarea{padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#121724;color:var(--text)}
+    .btn{padding:10px 14px;border-radius:12px;border:0;background:var(--brand);color:#0b0d12;font-weight:700;cursor:pointer}
+    .btn.secondary{background:#1b2135;color:var(--text);border:1px solid rgba(255,255,255,.12)}
+    .btn.warn{background:var(--warn);color:#0b0d12}
+    .muted{color:var(--muted)}
+    .section{display:none}
+    .section.active{display:block}
+    .table-wrap{overflow:auto;border-radius:12px;border:1px solid rgba(255,255,255,.08);margin-top:12px}
+    table{width:100%;border-collapse:separate;border-spacing:0}
+    thead th{position:sticky;top:0;background:#11152a;text-align:left;padding:10px;border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap}
+    tbody td{padding:10px;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px;vertical-align:top}
+    tbody tr:hover{background:rgba(255,255,255,.03)}
+    .pill{background:#1a2138;color:var(--text);border:1px solid rgba(255,255,255,.12);padding:2px 8px;border-radius:999px;font-size:12px}
+    .tools{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>PVCFree</h1>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="contatti">Contatti</button>
+      <button class="tab-btn" data-tab="db">Database Materiali</button>
+      <a class="tab-btn" href="contatti-admin.html" target="_blank" rel="noopener">Admin (📎 & Excel)</a>
+    </div>
 
-    <!-- Tailwind CSS (CDN) -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- ================== CONTATTI ================== -->
+    <section id="contatti" class="section active">
+      <div class="card">
+        <h2>Nuovo contatto</h2>
+        <p class="muted">Compila e premi <strong>Aggiungi contatto</strong>. Verrà salvato nella tabella qui sotto e inviato anche a Netlify Forms (per gestire gli allegati e l'export Excel).</p>
+        <div class="grid" style="margin-top:8px">
+          <div class="field" style="grid-column: span 4;">
+            <label for="azienda">Azienda</label>
+            <input id="azienda" placeholder="Ragione sociale">
+          </div>
+          <div class="field" style="grid-column: span 4;">
+            <label for="email">Email</label>
+            <input id="email" type="email" placeholder="nome@azienda.com">
+          </div>
+          <div class="field" style="grid-column: span 4;">
+            <label for="categoria">Categoria</label>
+            <select id="categoria">
+              <option>Cliente</option>
+              <option>Fornitore</option>
+              <option>Partner</option>
+              <option>Altro</option>
+            </select>
+          </div>
 
-    <!-- Icons -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-      html, body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, Noto Sans, sans-serif; }
-      /* Rimuoviamo @apply: con il CDN non viene processato. Usiamo utility class direttamente nell'HTML. */
-      .hidden-vis { display:none; }
-    </style>
+          <div class="field" style="grid-column: span 4;">
+            <label for="regione">Regione / Paese</label>
+            <input id="regione" placeholder="es. Lombardia / IT">
+          </div>
+          <div class="field" style="grid-column: span 4;">
+            <label for="polimero">Polimero</label>
+            <input id="polimero" placeholder="es. BIO / TPE-S">
+          </div>
+          <div class="field" style="grid-column: span 4;">
+            <label for="processo">Processo</label>
+            <input id="processo" placeholder="es. Stampaggio, Estrusione…">
+          </div>
 
-    <!-- Supabase JS v2 (CDN) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+          <div class="field" style="grid-column: span 12;">
+            <label for="note">Note</label>
+            <textarea id="note" rows="4" placeholder="Note, richieste specifiche, applicazioni…"></textarea>
+          </div>
 
-    <!-- PapaParse for CSV (auto delimiter) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-
-    <!-- ENV placeholders (replace or set here) -->
-    <!-- Option A: edit content of these metas; Option B: override at runtime with window.ENV in a separate script. -->
-    <meta name="supabase-url" content="https://cggnkjqmnilnflxaynda.supabase.co" />
-    <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNnZ25ranFtbmlsbmZseGF5bmRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5NzI5NjgsImV4cCI6MjA3MjU0ODk2OH0.ndVbgmNmQNJndDEPyb2q2Sy9h0_9PcaIaGvahAn7e2M" />
-
-    <!-- Basic theming -->
-    <meta name="theme-color" content="#000000"/>
-  </head>
-  <body class="bg-slate-50 min-h-screen">
-    <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-slate-200">
-      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-        <div class="flex items-center gap-3">
-          <svg class="h-8 w-8" viewBox="0 0 64 64" aria-label="PVCFree logo" role="img">
-            <rect width="64" height="64" rx="12" fill="#111"/>
-            <text x="50%" y="52%" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" fill="#fff">PVC</text>
-          </svg>
-          <span class="text-lg font-semibold">PVCFree</span>
-          <span class="inline-flex items-center px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">pvcfree2</span>
+          <div class="field" style="grid-column: span 6;">
+            <label for="immagini">Immagini (JPG/PNG/WEBP/GIF)</label>
+            <input id="immagini" type="file" accept="image/*">
+          </div>
         </div>
-        <nav class="flex items-center gap-2">
-          <button id="btn-login-header" class="inline-flex items-center justify-center px-4 py-2 rounded-xl font-medium shadow-sm border border-slate-200 hover:shadow transition" onclick="UI.showAuth()">Accedi</button>
-          <button id="btn-logout" class="inline-flex items-center justify-center px-4 py-2 rounded-xl font-medium shadow-sm border border-slate-200 hover:shadow transition" onclick="Auth.logout()" style="display:none">Esci</button>
-        </nav>
+
+        <div class="tools">
+          <button id="btn-add-contact" class="btn">Aggiungi contatto</button>
+          <button id="btn-reset" class="btn secondary">Reset modulo</button>
+        </div>
+
+        <div class="table-wrap">
+          <table id="tbl-contatti">
+            <thead>
+              <tr>
+                <th>Azienda</th><th>Email</th><th>Categoria</th><th>Regione</th>
+                <th>Polimero</th><th>Processo</th><th>Note</th><th>Immagine</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
-    </header>
+    </section>
 
-    <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Access Gate / Auth Card -->
-      <section id="auth-section" class="grid place-items-center min-h-[40vh]">
-        <div class="bg-white rounded-2xl shadow-md border border-slate-100">
-          <div class="mb-4 text-center">
-            <h1 class="text-2xl font-semibold">Accedi a PVCFree</h1>
-            <p class="text-slate-600">Email & password (Supabase Auth)</p>
+    <!-- ================== DATABASE MATERIALI ================== -->
+    <section id="db" class="section">
+      <div class="card">
+        <h2>Database Materiali</h2>
+        <p class="muted">Filtra per <strong>Tipologia polimero</strong>, <strong>Applicazione</strong> e <strong>Durezza (ShA)</strong>. La tabella mostra le proprietà principali.</p>
+
+        <div class="grid" style="margin-top:8px">
+          <div class="field" style="grid-column: span 4;">
+            <label>Tipologia polimero</label>
+            <select id="f-tipologia"><option value="">Tutte</option></select>
           </div>
-          <form id="auth-form" class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1" for="auth-email">Email</label>
-              <input id="auth-email" name="email" type="email" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400" placeholder="nome@azienda.it" required />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1" for="auth-password">Password</label>
-              <input id="auth-password" name="password" type="password" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400" placeholder="••••••••" required />
-            </div>
-            <div class="flex items-center justify-between gap-2 flex-wrap">
-              <button type="submit" class="inline-flex items-center justify-center px-4 py-2 rounded-xl font-medium shadow-sm border border-slate-200 hover:shadow transition bg-black text-white hover:bg-slate-800" id="btn-login">Accedi</button>
-              <button type="button" class="inline-flex items-center justify-center px-4 py-2 rounded-xl font-medium shadow-sm border border-slate-200 hover:shadow transition" id="btn-register">Registrati</button>
-              <button type="button" class="inline-flex items-center justify-center px-4 py-2 rounded-xl font-medium shadow-sm border border-slate-200 hover:shadow transition" id="btn-forgot">Password dimenticata?</button>
-            </div>
-            <p id="auth-message" class="text-sm text-slate-600"></p>
-            <div id="config-status" class="mt-2 text-xs text-slate-500"></div>
-          </form>
-          <div id="reset-section" class="mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200 hidden">
-            <h3 class="font-semibold mb-2">Imposta una nuova password</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1" for="reset-password">Nuova password</label>
-                <input id="reset-password" type="password" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400" placeholder="Nuova password" />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1" for="reset-password2">Ripeti password</label>
-                <input id="reset-password2" type="password" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400" placeholder="Ripeti password" />
-              </div>
-            </div>
-            <div class="mt-3 flex items-center gap-2">
-              <button id="btn-set-password" class="inline-flex items-center justify-center px-4 py-2 rounded-xl font-medium shadow-sm border border-slate-200 hover:shadow transition bg-black text-white hover:bg-slate-800">Imposta nuova password</button>
-              <span id="reset-message" class="text-sm text-slate-600"></span>
+          <div class="field" style="grid-column: span 4;">
+            <label>Applicazione</label>
+            <select id="f-app"><option value="">Tutte</option></select>
+          </div>
+          <div class="field" style="grid-column: span 4;">
+            <label>Durezza (ShA) — intervallo</label>
+            <div class="grid" style="grid-template-columns:1fr 1fr; gap:8px">
+              <input id="f-min" placeholder="min">
+              <input id="f-max" placeholder="max">
             </div>
           </div>
         </div>
-      </section>
 
-      <!-- App Section (visible after login) -->
-      <section id="app-section" class="space-y-8" style="display:none">
-        <!-- Filters + Materials DB -->
-        <div class="bg-white rounded-2xl shadow-md border border-slate-100">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-semibold">Database materiali</h2>
-            <span class="text-sm text-slate-500">Sorgente: <code>/data/materiali_database.csv</code></span>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1" for="f-regione">Regione</label>
-              <select id="f-regione" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"></select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1" for="f-polimero">Polimero</label>
-              <select id="f-polimero" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"></select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1" for="f-processo">Processo</label>
-              <select id="f-processo" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"></select>
-            </div>
-          </div>
-
-          <div class="overflow-auto border border-slate-200 rounded-xl">
-            <table id="materials-table" class="min-w-full text-sm">
-              <thead class="bg-slate-100 text-slate-700">
-                <tr>
-                  <th class="text-left px-3 py-2">Regione</th>
-                  <th class="text-left px-3 py-2">Polimero</th>
-                  <th class="text-left px-3 py-2">Processo</th>
-                  <th class="text-left px-3 py-2">Materiale</th>
-                  <th class="text-left px-3 py-2">Note</th>
-                </tr>
-              </thead>
-              <tbody id="materials-body" class="divide-y divide-slate-100 bg-white"></tbody>
-            </table>
-          </div>
-
-          <div id="materials-empty" class="hidden-vis mt-3 text-sm text-slate-600">Nessun record corrispondente ai filtri.</div>
+        <div class="tools">
+          <button id="btn-apply" class="btn">Applica</button>
+          <button id="btn-reset-db" class="btn secondary">Reset</button>
+          <button id="btn-export-db" class="btn secondary">Esporta CSV</button>
+          <span id="db-meta" class="muted" style="align-self:center"></span>
         </div>
 
-        <!-- Contacts / Parallel submission: Supabase + Netlify Forms -->
-        <div class="bg-white rounded-2xl shadow-md border border-slate-100">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-semibold">Contatti</h2>
-            <span class="inline-flex items-center px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">Doppio flusso: Supabase + Netlify Forms</span>
-          </div>
-
-          <!-- IMPORTANT: The form must be present at build time for Netlify detection -->
-          <form id="contact-form" name="contatti" method="POST" data-netlify="true" netlify-honeypot="bot-field" enctype="multipart/form-data" class="space-y-4">
-            <!-- Netlify Forms require this hidden form-name -->
-            <input type="hidden" name="form-name" value="contatti" />
-            <p class="hidden">
-              <label>Non compilare questo campo: <input name="bot-field" /></label>
-            </p>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1" for="c-nome">Nome e cognome</label>
-                <input id="c-nome" name="nome" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400" placeholder="Mario Rossi" required />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1" for="c-email">Email</label>
-                <input id="c-email" name="email" type="email" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400" placeholder="nome@azienda.it" required />
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1" for="c-regione">Regione</label>
-                <select id="c-regione" name="regione" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"></select>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1" for="c-polimero">Polimero</label>
-                <select id="c-polimero" name="polimero" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"></select>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1" for="c-processo">Processo</label>
-                <select id="c-processo" name="processo" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"></select>
-              </div>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1" for="c-messaggio">Messaggio</label>
-              <textarea id="c-messaggio" name="messaggio" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400" rows="4" placeholder="Scrivi qui..." required></textarea>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1" for="c-file">Allegati (immagini)</label>
-              <input id="c-file" name="allegati" type="file" accept="image/*" multiple class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400" />
-              <p class="text-xs text-slate-500 mt-1">Le immagini saranno caricate su Supabase Storage (<code>contact-images</code>) e inviate anche a Netlify Forms.</p>
-            </div>
-
-            <div class="flex items-center gap-3">
-              <button type="submit" class="inline-flex items-center justify-center px-4 py-2 rounded-xl font-medium shadow-sm border border-slate-200 hover:shadow transition bg-black text-white hover:bg-slate-800" id="btn-send">Invia</button>
-              <span id="contact-status" class="text-sm text-slate-600"></span>
-            </div>
-          </form>
+        <div class="table-wrap">
+          <table id="tbl-db">
+            <thead>
+              <tr>
+                <th>Sigla</th><th>Processo</th><th>regulation</th>
+                <th>Peso Specifico (g/cm3) ISO 1183-1</th>
+                <th>Carico di Rottura (N/mm2) ISO 527</th>
+                <th>Allungamento a Rottura (N/mm2) ISO 527</th>
+                <th>Compression Set (ASTM D 395) (22°C/72h)</th>
+                <th>special features</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
-      </section>
-    </main>
+      </div>
+    </section>
+  </div>
 
-    <footer class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 text-slate-500 text-sm">
-      <p>© <span id="year"></span> PVCFree • Netlify + Supabase</p>
-    </footer>
+  <!-- ====== Form "fantasma" per Netlify (rilevamento + upload) ====== -->
+  <form id="nl-contatti" name="contatti"
+        method="POST" data-netlify="true"
+        netlify-honeypot="bot-field"
+        enctype="multipart/form-data" hidden>
+    <input type="hidden" name="form-name" value="contatti">
+    <!-- campi verranno compilati via JS -->
+    <input type="text"   name="nome"      hidden>
+    <input type="email"  name="email"     hidden>
+    <textarea name="messaggio"            hidden></textarea>
+    <!-- l'allegato lo inviamo con fetch/FormData -->
+  
+  <div style="margin-top:8px"><button class="btn btn-outline" onclick="forgot()">Password dimenticata?</button></div>
+</form>
 
-    <script>
-// ======== ES5-Compatible Init (no arrow functions, no optional chaining) ========
-(function(){
-  // ---- Config ----
-  var META_URL_EL = document.querySelector('meta[name="supabase-url"]');
-  var META_KEY_EL = document.querySelector('meta[name="supabase-anon-key"]');
-  var SUPABASE_URL = (window.ENV && window.ENV.SUPABASE_URL) || (META_URL_EL ? META_URL_EL.getAttribute('content') : '');
-  var SUPABASE_ANON_KEY = (window.ENV && window.ENV.SUPABASE_ANON_KEY) || (META_KEY_EL ? META_KEY_EL.getAttribute('content') : '');
-  var BUCKET = 'contact-images';
-  var CONTACTS_TABLE = 'contacts';
-  var MATERIALS_CSV = '/data/materiali_database.csv';
-
-  // ---- Helpers ----
-  function $(sel){ return document.querySelector(sel); }
-  function setText(id, t){ var el=document.getElementById(id); if(el){ el.textContent = t; } }
-  var UI = {
-    showAuth: function(){ var a=$('#auth-section'), b=$('#app-section'); if(a) a.style.display='grid'; if(b) b.style.display='none'; var l=$('#btn-login-header'); if(l) l.style.display=''; var o=$('#btn-logout'); if(o) o.style.display='none'; },
-    showApp: function(){ var a=$('#auth-section'), b=$('#app-section'); if(a) a.style.display='none'; if(b) b.style.display='block'; var l=$('#btn-login-header'); if(l) l.style.display='none'; var o=$('#btn-logout'); if(o) o.style.display=''; }
-  };
-
-  function ensureStatusRow(){
-    if (!document.getElementById('config-status')){
-      var p = document.createElement('div');
-      p.id = 'config-status';
-      p.className = 'mt-2 text-xs';
-      var anchor = document.getElementById('auth-message');
-      if (anchor && anchor.parentNode){ anchor.parentNode.insertBefore(p, anchor.nextSibling); }
-    }
-  }
-
-  function ensureSupabaseSDK(callback){
-    if (window.supabase) return callback(true);
-    function tryLoad(src, cb){
-      var s = document.createElement('script'); s.src = src; s.defer = true; s.onload = function(){ cb(!!window.supabase); }; s.onerror = function(){ cb(false); }; document.head.appendChild(s);
-    }
-    tryLoad('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js', function(ok){
-      if (ok) return callback(true);
-      tryLoad('https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js', function(ok2){ callback(!!ok2); });
-    });
-  }
-
-  var supabaseClient = null;
-
-  // App bootstrap (ripristina filtri/materiali dopo login)
-  var App = { didInit:false, initAfterLogin:function(session){ if(this.didInit) return; this.didInit = true; try { Materials.load(); if (Materials.mirrorFiltersIntoContactForm) Materials.mirrorFiltersIntoContactForm(); } catch(e){ console.warn('App.initAfterLogin warning:', e); } } };
-
-  document.addEventListener('DOMContentLoaded', function(){
-    var yEl = document.getElementById('year'); if (yEl) yEl.textContent = new Date().getFullYear();
-    ensureStatusRow();
-
-    ensureSupabaseSDK(function(sdkOk){
-      var urlOk = /^https?:\/\//.test(SUPABASE_URL);
-      var keyOk = !!SUPABASE_ANON_KEY;
-      var host = '(vuoto)';
-      try { host = (new URL(SUPABASE_URL)).host || host; } catch(e) {}
-      setText('config-status', 'Stato — SDK: '+(sdkOk?'OK':'KO')+' • URL: '+(urlOk?host:'non valido')+' • KEY: '+(keyOk? (SUPABASE_ANON_KEY.slice(0,8)+'… ('+SUPABASE_ANON_KEY.length+' chars)') : '(vuota)'));
-      var cs = document.getElementById('config-status'); if (cs) cs.style.color = (sdkOk && urlOk && keyOk) ? '#0a0' : '#a00';
-
-      if (!(sdkOk && urlOk && keyOk)){
-        UI.showAuth();
-        if (!sdkOk) setText('auth-message','Errore: libreria di accesso non caricata (CDN bloccato?).');
-        else setText('auth-message','Configurazione mancante o non valida: controlla URL e chiave di Supabase.');
-        mountHandlers();
-        return;
-      }
-
-      try {
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      } catch(e){
-        console.error('createClient error', e);
-        setText('auth-message','Configurazione non valida: impossibile creare il client.');
-        UI.showAuth();
-        mountHandlers();
-        return;
-      }
-
-      supabaseClient.auth.getSession().then(function(res){
-        var session = res && res.data ? res.data.session : null;
-        if (session) { UI.showApp(); App.initAfterLogin(session); } else { UI.showAuth(); }
-      });
-
-      supabaseClient.auth.onAuthStateChange(function(event, session){
-        if (event === 'PASSWORD_RECOVERY'){
-          var box = document.getElementById('reset-section'); if (box) box.classList.remove('hidden');
-          setText('reset-message','Inserisci la nuova password e conferma.');
-          UI.showAuth();
-        } else if (session){
-          var box2 = document.getElementById('reset-section'); if (box2) box2.classList.add('hidden');
-          UI.showApp(); App.initAfterLogin(session);
-        } else {
-          UI.showAuth();
-        }
-      });
-
-      mountHandlers();
+  <script>
+  // ====== Tabs
+  document.querySelectorAll('.tab-btn').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const tab=b.dataset.tab; if(!tab) return;
+      document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+      b.classList.add('active'); document.getElementById(tab).classList.add('active');
     });
   });
 
-  function mountHandlers(){
-    var form = $('#auth-form'); if (form) form.addEventListener('submit', Auth.login);
-    var reg = $('#btn-register'); if (reg) reg.addEventListener('click', Auth.register);
-    var forgot = $('#btn-forgot'); if (forgot) forgot.addEventListener('click', Auth.forgot);
-    var setBtn = $('#btn-set-password'); if (setBtn) setBtn.addEventListener('click', Auth.setNewPassword);
-    var rf = $('#f-regione'); if (rf) rf.addEventListener('change', function(){ Materials.renderFiltered(); });
-    var pf = $('#f-polimero'); if (pf) pf.addEventListener('change', function(){ Materials.renderFiltered(); });
-    var pr = $('#f-processo'); if (pr) pr.addEventListener('change', function(){ Materials.renderFiltered(); });
-    var cf = $('#contact-form'); if (cf) cf.addEventListener('submit', Contacts.handleSubmit);
+  // ====== CONTATTI (tab)
+  const qs = s=>document.querySelector(s);
+  const $tbodyContatti = qs('#tbl-contatti tbody');
+
+  function addRowContatto(row){
+    const tr=document.createElement('tr');
+    tr.innerHTML = `
+      <td>${row.azienda||''}</td>
+      <td>${row.email||''}</td>
+      <td>${row.categoria||''}</td>
+      <td>${row.regione||''}</td>
+      <td>${row.polimero||''}</td>
+      <td>${row.processo||''}</td>
+      <td>${(row.note||'').replace(/</g,'&lt;')}</td>
+      <td>${row.imgName? `<span class="pill">${row.imgName}</span>`:'—'}</td>`;
+    $tbodyContatti.prepend(tr);
   }
 
-  // ---- Auth ----
-  var Auth = {
-    login: function(e){
-      e.preventDefault();
-      setText('auth-message','Accesso in corso…');
-      if (!supabaseClient){ setText('auth-message','Impossibile accedere: configurazione Supabase mancante.'); return; }
-      var email = ($('#auth-email')||{}).value || '';
-      var password = ($('#auth-password')||{}).value || '';
-      supabaseClient.auth.signInWithPassword({ email: email.trim(), password: password })
-        .then(function(res){ setText('auth-message', res.error ? ('Errore: '+res.error.message) : ''); });
-    },
-    register: function(){
-      setText('auth-message','Registrazione in corso…');
-      if (!supabaseClient){ setText('auth-message','Impossibile registrarsi: configurazione Supabase mancante.'); return; }
-      var email = ($('#auth-email')||{}).value || '';
-      var password = ($('#auth-password')||{}).value || '';
-      supabaseClient.auth.signUp({ email: email.trim(), password: password })
-        .then(function(res){ setText('auth-message', res.error ? ('Errore: '+res.error.message) : 'Registrazione effettuata. Ora accedi.'); });
-    },
-    forgot: function(){
-      var email = ($('#auth-email')||{}).value || '';
-      if (!email){ setText('auth-message','Inserisci la tua email nel campo sopra e poi clicca "Password dimenticata?"'); return; }
-      if (!supabaseClient){ setText('auth-message','Impossibile inviare reset: configurazione Supabase mancante.'); return; }
-      var redirectTo = window.location.origin + '/';
-      supabaseClient.auth.resetPasswordForEmail(email.trim(), { redirectTo: redirectTo })
-        .then(function(res){ setText('auth-message', res.error ? ('Errore reset: '+res.error.message) : 'Ti abbiamo inviato un link per reimpostare la password.'); });
-    },
-    setNewPassword: function(){
-      var pass1 = ($('#reset-password')||{}).value || '';
-      var pass2 = ($('#reset-password2')||{}).value || '';
-      if (!pass1 || pass1 !== pass2){ setText('reset-message','Le password non coincidono.'); return; }
-      if (!supabaseClient){ setText('reset-message','Configurazione mancante.'); return; }
-      supabaseClient.auth.updateUser({ password: pass1 })
-        .then(function(res){ if (res.error){ setText('reset-message','Errore: '+res.error.message); return; } setText('reset-message','Password aggiornata! Ora puoi accedere.'); setTimeout(function(){ var box=document.getElementById('reset-section'); if (box) box.classList.add('hidden'); }, 1200); });
+  async function inviaA_Netlify({ nome, email, messaggio, file }) {
+    try {
+      // compilo anche gli input del form fantasma (facoltativo ma utile)
+      const frm = document.getElementById('nl-contatti');
+      frm.querySelector('input[name="nome"]').value = nome || '';
+      frm.querySelector('input[name="email"]').value = email || '';
+      frm.querySelector('textarea[name="messaggio"]').value = messaggio || '';
+
+      // invio via fetch con FormData (così includo file)
+      const fd = new FormData(frm);
+      if (file) fd.append('allegato', file);
+      await fetch('/', { method: 'POST', body: fd });
+      console.log('Inviato a Netlify');
+    } catch (e) { console.error('Netlify form error:', e); }
+  }
+
+  qs('#btn-add-contact').addEventListener('click', async ()=>{
+    const row = {
+      azienda : qs('#azienda').value.trim(),
+      email   : qs('#email').value.trim(),
+      categoria: qs('#categoria').value,
+      regione : qs('#regione').value.trim(),
+      polimero: qs('#polimero').value.trim(),
+      processo: qs('#processo').value.trim(),
+      note    : qs('#note').value.trim(),
+    };
+    const file = qs('#immagini').files && qs('#immagini').files[0] ? qs('#immagini').files[0] : null;
+    row.imgName = file ? file.name : '';
+
+    // 1) aggiungo alla tabella locale
+    addRowContatto(row);
+
+    // 2) invio in parallelo a Netlify (per allegati + admin)
+    await inviaA_Netlify({ nome: row.azienda, email: row.email, messaggio: row.note, file });
+
+    // 3) reset campi base (lascia l'upload)
+    // (se vuoi reset anche file, scommenta la riga)
+    // qs('#immagini').value = '';
+  });
+
+  qs('#btn-reset').addEventListener('click', ()=>{
+    ['azienda','email','regione','polimero','processo','note'].forEach(id=>qs('#'+id).value='');
+    qs('#categoria').selectedIndex=0;
+    qs('#immagini').value='';
+  });
+
+  // ====== DATABASE MATERIALI
+  const DB = { rows:[], headers:[], idx:{} };
+
+  function parseCSV(text){
+    // normalizza CRLF
+    const lines = text.replace(/\r\n/g,'\n').split('\n').filter(l=>l.trim().length);
+    // rimuovi eventuale riga "DATI di INPUT;...;DATI di OUTPUT..."
+    if (/^ *DATI.+OUTPUT/i.test(lines[0])) lines.shift();
+
+    const sep = ';'; // il tuo CSV usa ; come separatore
+    const headers = lines[0].split(sep).map(h=>h.trim());
+    const rows = lines.slice(1).map(line=>{
+      const cells = line.split(sep);
+      const obj = {};
+      headers.forEach((h,i)=>obj[h]= (cells[i]??'').trim());
+      return obj;
+    });
+    return { headers, rows };
+  }
+
+  async function loadCSV(){
+    const urls = [
+      '/data/materiali_database.csv',
+      './data/materiali_database.csv',
+      'data/materiali_database.csv'
+    ];
+    let txt=null, used=null;
+    for (const u of urls){
+      try{
+        const r = await fetch(`${u}?v=${Date.now()}`);
+        if (r.ok){ txt = await r.text(); used = u; break; }
+      }catch{}
     }
+    if (!txt) throw new Error('CSV non trovato nelle path /data, ./data, data');
+    console.log('CSV caricato da:', used);
+    const {headers, rows} = parseCSV(txt);
+    // mappa nomi colonne attese (adatta ai tuoi header reali)
+    DB.headers = headers;
+    DB.rows = rows.map(r=>{
+      return {
+        tipologia: r['Tipologia polimero']||'',
+        applicazione: r['Applicazione']||'',
+        durezza: (r['Durezza (ShA) - ISO 868']||'').replace(/[^\d.]/g,''),
+        sigla: r['Sigla']||'',
+        processo: r['Processo']||r['Processo ']||'',
+        regulation: r['regulation']||'',
+        densita: r['Peso Specifico (g/cm3) ISO 1183-1']||'',
+        carico: r['Carico di Rottura (N/mm2) ISO 527']||'',
+        allung: r['Allungamento a Rottura (N/mm2) ISO 527']||'',
+        cset: r['Compression Set  (ASTM D 395) ( 22°C/72h)']||r['Compression Set (ASTM D 395) (22°C/72h)']||'',
+        features: r['special features']||''
+      };
+    });
+    buildFilters();
+    renderDB(DB.rows);
+  }
+
+  function uniq(arr){ return [...new Set(arr.filter(Boolean))].sort(); }
+
+  function buildFilters(){
+    const tip = uniq(DB.rows.map(r=>r.tipologia));
+    const app = uniq(DB.rows.map(r=>r.applicazione));
+    const $tip = qs('#f-tipologia'), $app = qs('#f-app');
+    tip.forEach(v=>{ const o=document.createElement('option'); o.value=v;o.textContent=v;$tip.appendChild(o); });
+    app.forEach(v=>{ const o=document.createElement('option'); o.value=v;o.textContent=v;$app.appendChild(o); });
+  }
+
+  function renderDB(rows){
+    const tb = qs('#tbl-db tbody'); tb.innerHTML='';
+    rows.forEach(r=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.sigla}</td>
+        <td>${r.processo}</td>
+        <td>${r.regulation}</td>
+        <td>${r.densita}</td>
+        <td>${r.carico}</td>
+        <td>${r.allung}</td>
+        <td>${r.cset}</td>
+        <td>${r.features}</td>`;
+      tb.appendChild(tr);
+    });
+    qs('#db-meta').textContent = `${rows.length} risultati`;
+  }
+
+  function applyFilters(){
+    const tip = qs('#f-tipologia').value;
+    const app = qs('#f-app').value;
+    const min = parseFloat(qs('#f-min').value.replace(',','.')) || -Infinity;
+    const max = parseFloat(qs('#f-max').value.replace(',','.')) || Infinity;
+
+    const out = DB.rows.filter(r=>{
+      if (tip && r.tipologia !== tip) return false;
+      if (app && r.applicazione !== app) return false;
+      const d = parseFloat((r.durezza||'').toString().replace(',','.'));
+      if (!isNaN(d)) {
+        if (d < min) return false;
+        if (d > max) return false;
+      } else {
+        // se non numerico, passa solo se range è "aperto"
+        if (isFinite(min) || isFinite(max)) return false;
+      }
+      return true;
+    });
+    renderDB(out);
+  }
+
+  function exportCSV(rows){
+    const headers = ['Sigla','Processo','regulation','Peso Specifico (g/cm3) ISO 1183-1','Carico di Rottura (N/mm2) ISO 527','Allungamento a Rottura (N/mm2) ISO 527','Compression Set (ASTM D 395) (22°C/72h)','special features'];
+    const lines = [headers.join(';')].concat(rows.map(r=>[
+      r.sigla,r.processo,r.regulation,r.densita,r.carico,r.allung,r.cset,r.features
+    ].map(v=>String(v).replace(/;/g,',')).join(';')));
+    const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='materiali_filtrati.csv'; a.click();
+  }
+
+  qs('#btn-apply').addEventListener('click', applyFilters);
+  qs('#btn-reset-db').addEventListener('click', ()=>{
+    ['#f-tipologia','#f-app','#f-min','#f-max'].forEach(s=>{ const el=qs(s); if(el.tagName==='SELECT') el.selectedIndex=0; else el.value=''; });
+    renderDB(DB.rows);
+  });
+  qs('#btn-export-db').addEventListener('click', ()=> exportCSV(Array.from(qs('#tbl-db tbody').children).map(tr=>{
+    const tds = tr.querySelectorAll('td'); return {
+      sigla: tds[0].textContent, processo: tds[1].textContent, regulation: tds[2].textContent,
+      densita: tds[3].textContent, carico: tds[4].textContent, allung: tds[5].textContent,
+      cset: tds[6].textContent, features: tds[7].textContent
+    };
+  })));
+
+  // INIT
+  (async function init(){
+    try { await loadCSV(); } 
+    catch(e){ console.error(e); qs('#db-meta').textContent = 'Errore: ' + e.message; }
+  })();
+  </script>
+
+<script>
+(function(){
+  function qs(id){return document.getElementById(id);}
+  function ensureClient(){
+    if (window.supabaseClient) return window.supabaseClient;
+    if (window.supabase && window.ENV && window.ENV.SUPABASE_URL && window.ENV.SUPABASE_ANON_KEY){
+      try { return window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY); } catch(e){ return null; }
+    }
+    return null;
+  }
+  window.forgot = async function forgot(){
+    var emailEl = qs('auth_email') || qs('auth-email') || qs('email');
+    var email = emailEl && emailEl.value ? String(emailEl.value).trim() : "";
+    if (!email){ alert("Inserisci la tua email nel campo Email e riprova."); return; }
+    var client = ensureClient();
+    if (!client){ alert("Reset non disponibile: configurazione Supabase mancante."); return; }
+    try{
+      var redirectTo = window.location.origin + "/";
+      var res = await client.auth.resetPasswordForEmail(email, { redirectTo: redirectTo });
+      if (res && res.error){ alert("Errore reset: " + res.error.message); }
+      else { alert("Ti abbiamo inviato un link per reimpostare la password."); }
+    }catch(e){ alert("Errore inatteso: " + (e && e.message ? e.message : e)); }
   };
 
-  // ---- Materials ----
-  var Materials = {
-    raw: [],
-    unique: function(field){
-      var set = {};
-      for (var i=0;i<this.raw.length;i++){ var v = (this.raw[i][field]||'').trim(); if (v) set[v]=true; }
-      var arr=['Tutte']; for (var k in set){ if (set.hasOwnProperty(k)) arr.push(k); }
-      arr.sort(function(a,b){ return a.localeCompare(b); }); return arr;
-    },
-    load: function(){
-      return fetch(MATERIALS_CSV, { cache: 'no-store' })
-        .then(function(res){ return res.text(); })
-        .then(function(text){
-          var parsed = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: false });
-          Materials.raw = (parsed.data||[]).map(function(r){
-            return {
-              Regione: r.Regione || r.regione || r.Region || '',
-              Polimero: r.Polimero || r.polimero || r.Polymer || '',
-              Processo: r.Processo || r.processo || r.Process || '',
-              Materiale: r.Materiale || r.materiale || r.Material || '',
-              Note: r.Note || r.note || ''
-            };
-          });
-          Materials.populateSelect('#f-regione', Materials.unique('Regione'));
-          Materials.populateSelect('#f-polimero', Materials.unique('Polimero'));
-          Materials.populateSelect('#f-processo', Materials.unique('Processo'));
-          Materials.renderFiltered();
-          Materials.populateSelect('#c-regione', Materials.unique('Regione'));
-          Materials.populateSelect('#c-polimero', Materials.unique('Polimero'));
-          Materials.populateSelect('#c-processo', Materials.unique('Processo'));
-        })
-        .catch(function(err){ console.error('Errore caricamento CSV:', err); });
-    },
-    populateSelect: function(sel, options){
-      var el = $(sel); if (!el) return;
-      el.innerHTML = '';
-      for (var i=0;i<options.length;i++){
-        var opt = document.createElement('option');
-        opt.value = options[i] === 'Tutte' ? '' : options[i];
-        opt.textContent = options[i];
-        el.appendChild(opt);
-      }
-    },
-    mirrorFiltersIntoContactForm: function(){
-      var cr=$('#c-regione'), fr=$('#f-regione'); if (cr && fr) cr.value = fr.value;
-      var cp=$('#c-polimero'), fp=$('#f-polimero'); if (cp && fp) cp.value = fp.value;
-      var cpr=$('#c-processo'), fpr=$('#f-processo'); if (cpr && fpr) cpr.value = fpr.value;
-      function sync(){ var fr=$('#f-regione'), fp=$('#f-polimero'), fpr=$('#f-processo'); var cr=$('#c-regione'), cp=$('#c-polimero'), cpr=$('#c-processo'); if (cr && fr) cr.value = fr.value; if (cp && fp) cp.value = fp.value; if (cpr && fpr) cpr.value = fpr.value; }
-      var frel=$('#f-regione'); if (frel) frel.addEventListener('change', sync);
-      var fpel=$('#f-polimero'); if (fpel) fpel.addEventListener('change', sync);
-      var fprel=$('#f-processo'); if (fprel) fprel.addEventListener('change', sync);
-    },
-    renderFiltered: function(){
-      var fr=$('#f-regione'), fp=$('#f-polimero'), fpr=$('#f-processo');
-      var regione = fr ? (fr.value || null) : null;
-      var polimero = fp ? (fp.value || null) : null;
-      var processo = fpr ? (fpr.value || null) : null;
-      var rows = [];
-      for (var i=0;i<Materials.raw.length;i++){
-        var r = Materials.raw[i];
-        if (( !regione || r.Regione===regione ) && ( !polimero || r.Polimero===polimero ) && ( !processo || r.Processo===processo )) rows.push(r);
-      }
-      var body = $('#materials-body'); if (!body) return; body.innerHTML='';
-      for (var j=0;j<rows.length;j++){
-        var tr=document.createElement('tr');
-        tr.innerHTML = '<td class="px-3 py-2">'+rows[j].Regione+'</td>'+
-                       '<td class="px-3 py-2">'+rows[j].Polimero+'</td>'+
-                       '<td class="px-3 py-2">'+rows[j].Processo+'</td>'+
-                       '<td class="px-3 py-2">'+rows[j].Materiale+'</td>'+
-                       '<td class="px-3 py-2">'+rows[j].Note+'</td>';
-        body.appendChild(tr);
-      }
-      var empty=$('#materials-empty'); if (empty) empty.classList.toggle('hidden-vis', rows.length !== 0);
-    }
-  };
-
-  // ---- Contacts ----
-  var Contacts = {
-    handleSubmit: function(e){
-      e.preventDefault();
-      var form = e.currentTarget;
-      var status = $('#contact-status'); if (status) status.textContent='Invio in corso…';
-      var btn = $('#btn-send'); if (btn) btn.disabled = true;
-      try {
-        var fd = new FormData(form);
-        var payload = {
-          nome: (fd.get('nome') ? String(fd.get('nome')).trim() : ''),
-          email: (fd.get('email') ? String(fd.get('email')).trim() : ''),
-          regione: (fd.get('regione') ? String(fd.get('regione')) : ''),
-          polimero: (fd.get('polimero') ? String(fd.get('polimero')) : ''),
-          processo: (fd.get('processo') ? String(fd.get('processo')) : ''),
-          messaggio: (fd.get('messaggio') ? String(fd.get('messaggio')).trim() : '')
-        };
-        var fileInput = document.getElementById('c-file');
-        var files = (fileInput && fileInput.files) ? fileInput.files : [];
-        var uploadedUrls = [];
-        function doNetlifySubmit(){
-          var netlifyFD = new FormData();
-          netlifyFD.append('form-name','contatti');
-          for (var k in payload){ if (payload.hasOwnProperty(k)) netlifyFD.append(k, payload[k]); }
-          if (files && files.length){ for (var i=0;i<files.length;i++){ netlifyFD.append('allegati', files[i], files[i].name); } }
-          for (var u=0; u<uploadedUrls.length; u++){ netlifyFD.append('supabase_image_url_'+(u+1), uploadedUrls[u]); }
-          fetch('/', { method:'POST', body: netlifyFD }).then(function(){ if(status) status.textContent='Grazie! Messaggio inviato.'; form.reset(); Materials.mirrorFiltersIntoContactForm(); }).catch(function(){ if(status) status.textContent='Invio a Netlify non riuscito (ma il salvataggio interno potrebbe essere riuscito).'; });
+  // Optional: visit with ?clear-sw=1 to unregister old service workers (no-op warning)
+  try{
+    var params = new URLSearchParams(window.location.search);
+    if (params.get("clear-sw") === "1" && 'serviceWorker' in navigator){
+      navigator.serviceWorker.getRegistrations().then(function(rs){
+        rs.forEach(function(r){ r.unregister(); });
+        if (window.caches && caches.keys) {
+          caches.keys().then(function(keys){ keys.forEach(function(k){ caches.delete(k); }); });
         }
-        if (files && files.length){
-          var i=0;
-          function uploadNext(){
-            if (i>=files.length) return insertThenSubmit();
-            var file = files[i++];
-            var path = Date.now()+'_'+Math.random().toString(36).slice(2)+'_'+file.name;
-            supabaseClient.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false })
-              .then(function(res){
-                if (!res.error){ var pub = supabaseClient.storage.from(BUCKET).getPublicUrl(res.data.path); if (pub && pub.data && pub.data.publicUrl) uploadedUrls.push(pub.data.publicUrl); }
-                uploadNext();
-              })
-              .catch(function(){ uploadNext(); });
-          }
-          function insertThenSubmit(){
-            supabaseClient.from(CONTACTS_TABLE).insert([{ nome: payload.nome, email: payload.email, regione: payload.regione, polimero: payload.polimero, processo: payload.processo, messaggio: payload.messaggio, image_urls: uploadedUrls, created_at: new Date().toISOString() }])
-              .then(function(){ doNetlifySubmit(); })
-              .catch(function(){ doNetlifySubmit(); });
-          }
-          uploadNext();
-        } else {
-          supabaseClient.from(CONTACTS_TABLE).insert([{ nome: payload.nome, email: payload.email, regione: payload.regione, polimero: payload.polimero, processo: payload.processo, messaggio: payload.messaggio, image_urls: [], created_at: new Date().toISOString() }])
-            .then(function(){ doNetlifySubmit(); })
-            .catch(function(){ doNetlifySubmit(); });
-        }
-      } catch(err){ console.error(err); if(status) status.textContent='Si è verificato un errore durante l\'invio.'; }
-      finally { var btn2=$('#btn-send'); if (btn2) btn2.disabled=false; }
+        console.log("Service workers e cache rimossi.");
+      });
     }
-  };
+  }catch(_){}
 })();
 </script>
-  </body>
+</body>
 </html>
