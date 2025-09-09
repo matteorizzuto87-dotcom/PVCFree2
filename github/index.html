@@ -578,5 +578,23 @@
     initSupabase();
   });
 </script>
-</body>
-</html>
+    <!-- Netlify: form fantasma per rilevamento -->
+<form name="contatti"
+      method="POST"
+      data-netlify="true"
+      netlify-honeypot="bot-field"
+      enctype="multipart/form-data"
+      hidden>
+  <input type="hidden" name="form-name" value="contatti">
+  <!-- honeypot antispam -->
+  <p style="display:none;">
+    <label>Non compilare: <input name="bot-field" /></label>
+  </p>
+
+  <!-- campi minimi -->
+  <input type="text"   name="nome"      value="Test Mario">
+  <input type="email"  name="email"     value="test@example.com">
+  <textarea name="messaggio">Prova automatica</textarea>
+  <input type="file"   name="allegato">
+  <button type="submit">Invia</button>
+</form>
