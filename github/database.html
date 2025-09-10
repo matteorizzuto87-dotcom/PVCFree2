@@ -1,274 +1,188 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Database Materiali | Netfly</title>
-  <meta name="description" content="Filtra e consulta il database materiali per tipologia, applicazione e durezza." />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root { --bg:#0b0d12; --panel:#121621; --muted:#9aa3b2; --text:#e8ecf4; --primary:#6aa5ff; --ring:rgba(106,165,255,.35); --radius:16px; }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial}
-    header{max-width:1100px;margin:24px auto;padding:0 20px;display:flex;justify-content:space-between;align-items:center}
-    .brand{display:flex;gap:10px;align-items:center;font-weight:700}
-    .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#6aa5ff,#3ddc97)}
-    .container{max-width:1100px;margin:0 auto 64px;padding:0 20px}
-    .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.00));border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);backdrop-filter:blur(8px);box-shadow:0 12px 30px rgba(0,0,0,.35)}
-    .panel{padding:22px}
-    h1{font-size:28px;margin:0 0 8px}
-    p{color:var(--muted)}
-    .filters{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;margin-top:16px}
-    @media (max-width:900px){.filters{grid-template-columns:1fr 1fr}}
-    label{font-size:13px;font-weight:600}
-    input,select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:var(--panel);color:var(--text);outline:none;box-shadow:0 0 0 0 var(--ring)}
-    input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--ring)}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;font-weight:600;background:linear-gradient(180deg,#6aa5ff,#5a93ea);color:#0b0d12;border:0;box-shadow:0 10px 18px rgba(106,165,255,.35);cursor:pointer}
-    .btn.secondary{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.12);box-shadow:none}
-    .table-wrap{margin-top:18px;overflow:auto;border-radius:12px;border:1px solid rgba(255,255,255,.08)}
-    table{width:100%;border-collapse:separate;border-spacing:0;background:rgba(255,255,255,.02)}
-    thead th{position:sticky;top:0;background:rgba(18,22,33,.96);backdrop-filter:blur(6px);text-align:left;padding:10px 12px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.08)}
-    tbody td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px;color:#e8ecf4}
-    tbody tr:hover{background:rgba(255,255,255,.03)}
-    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.08);font-size:12px}
-    .toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
-    .muted{color:var(--muted);font-size:12px}
-    a{color:#6aa5ff}
-    .help{font-size:12px;color:var(--muted);margin-top:6px;white-space:pre-wrap}
-    .uploader{margin-top:10px;display:none}
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>PVC-FREE K2025 contatti e database — Database Materiali</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+  :root { --bg:#0f172a; --card:#0b1220; --muted:#94a3b8; --accent:#22c55e; --ring:#38bdf8; --text:#e5e7eb; --border:#1f2937; }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 1200px at 20% -5%, #0ea5e910, transparent 60%),radial-gradient(1400px 1400px at 120% 10%, #22c55e10, transparent 50%),var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;min-height:100vh}
+  header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#0f172a,#0f172acc);backdrop-filter:saturate(1.2) blur(6px);border-bottom:1px solid #111827}
+  .nav{display:flex;align-items:center;gap:12px;padding:10px 14px;max-width:1200px;margin:0 auto}
+  .brand h1{font-size:18px;line-height:1.1;margin:0;background:linear-gradient(90deg,#e5e7eb,#93c5fd,#6ee7b7);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800}
+  .brand small{color:#9ca3af;font-weight:600}
+  .tabs{display:flex;gap:8px;margin:10px 0}
+  .tab{padding:8px 12px;border-radius:10px;border:1px solid #334155;cursor:pointer;color:#e5e7eb;text-decoration:none}
+  .tab.active{background:#0b1220;border-color:#22c55e;color:#22c55e}
+  .container{padding:16px;max-width:1200px;margin:0 auto}
+  .card{background:linear-gradient(180deg,#0b1220,#0b1220f0);border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 60px #0006}
+  .card-pad{padding:16px}
+  .muted{color:var(--muted)}
+  label{font-size:12px;color:var(--muted);display:block;margin:6px 0}
+  select,input{width:100%;background:#0a0f1d;color:var(--text);border:1px solid #1e293b;border-radius:10px;padding:10px 12px;outline:none;transition:all .2s ease}
+  select:focus,input:focus{border-color:var(--ring);box-shadow:0 0 0 3px #38bdf833}
+  .grid{display:grid;gap:10px;grid-template-columns:repeat(12,1fr)}
+  .col-12{grid-column:span 12}.col-6{grid-column:span 6}.col-4{grid-column:span 4}.col-3{grid-column:span 3}
+  @media (max-width:900px){.col-6,.col-4,.col-3{grid-column:span 12}}
+  .right{margin-left:auto}
+  .table-wrap{margin-top:12px;overflow:auto}
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px solid #1f2937;padding:10px 8px;text-align:left;vertical-align:top;font-size:14px}
+  th{color:#cbd5e1;font-weight:700;position:sticky;top:0;background:#0b1220}
+  tr:hover td{background:#0b1220bb}
+  .badge{display:inline-flex;gap:6px;align-items:center;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #334155;color:#a5b4fc}
+  .controls{display:flex;gap:10px;flex-wrap:wrap}
+</style>
 </head>
 <body>
-  <header>
-    <div class="brand"><div class="logo" aria-hidden="true"></div><span>Netfly</span></div>
-    <nav><a href="/">Home</a> <span class="muted">/</span> <strong>Database</strong></nav>
-  </header>
-  <main class="container">
-    <section class="card panel">
-      <h1>Database Materiali</h1>
-      <p>Se il CSV online non viene trovato, puoi <strong>caricare il file localmente</strong> qui sotto per testare subito.</p>
-      <div class="help" id="diag"></div>
-      <div class="uploader" id="uploader">
-        <label class="btn secondary">
-          <input type="file" id="file" accept=".csv" style="display:none"/>
-          Carica CSV locale
-        </label>
-        <span class="muted">Il file rimane sul tuo browser (non viene inviato al server).</span>
+<header>
+  <div class="nav">
+    <div class="brand"><h1>PVC-FREE K2025 contatti e database</h1><small>by TPV Compound</small></div>
+    <div class="right"><img src="./assets/sft-polymer.png" alt="SFT Polymer" style="height:26px"/></div>
+  </div>
+  <div class="nav" style="padding-top:0">
+    <div class="tabs">
+      <a class="tab" href="./index.html">Contatti</a>
+      <div class="tab active">Database Materiali</div>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <section class="card card-pad">
+    <h2 style="margin-top:0">Database Materiali <span class="muted">— scegli tra i materiali a disposizione</span></h2>
+    <div class="grid">
+      <div class="col-3">
+        <label>Polimero</label>
+        <select id="f-polimero"></select>
       </div>
-
-      <div class="filters" aria-label="Filtri database">
-        <div>
-          <label for="f-tipologia">Tipologia polimero</label>
-          <select id="f-tipologia"><option value="">Tutte</option></select>
-        </div>
-        <div>
-          <label for="f-app">Applicazione</label>
-          <select id="f-app"><option value="">Tutte</option></select>
-        </div>
-        <div>
-          <label for="f-durom">Durezza (ShA) – intervallo</label>
-          <div class="row">
-            <input id="f-duro-min" type="number" min="0" max="100" placeholder="min" />
-            <input id="f-duro-max" type="number" min="0" max="100" placeholder="max" />
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn" id="btn-filtra">Applica</button>
-          <button class="btn secondary" id="btn-reset" type="button">Reset</button>
-        </div>
+      <div class="col-3">
+        <label>Applicazione</label>
+        <select id="f-applicazione"></select>
       </div>
-
-      <div class="toolbar">
-        <div class="muted"><span id="count">0</span> risultati</div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn secondary" id="btn-export">Esporta CSV</button>
-        </div>
+      <div class="col-3">
+        <label>Durezza (Shore A)</label>
+        <select id="f-durezza"></select>
       </div>
-
-      <div class="table-wrap">
-        <table id="results" aria-describedby="count">
-          <thead>
-            <tr>
-              <th>Sigla</th>
-              <th>Processo</th>
-              <th>regulation</th>
-              <th>Peso Specifico (g/cm3) ISO 1183-1</th>
-              <th>Carico di Rottura (N/mm2) ISO 527</th>
-              <th>Allungamento a Rottura (N/mm2) ISO 527</th>
-              <th>Compression Set (ASTM D 395) (22°C/72h)</th>
-              <th>special features</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <div class="col-3">
+        <label>&nbsp;</label>
+        <input id="f-search" placeholder="Cerca per nome/descrizione…"/>
       </div>
-    </section>
-  </main>
+    </div>
 
-  <script>
-    const CSV_CANDIDATES = [
-      '/data/materiali_database.csv',
-      './data/materiali_database.csv',
-      'data/materiali_database.csv',
-    ];
-    const diag = document.getElementById('diag');
-    const uploader = document.getElementById('uploader');
-    const fileInput = document.getElementById('file');
+    <div class="controls" style="margin-top:10px">
+      <div class="muted">Sorgente: <code>./data/materiali_database.csv</code></div>
+      <div class="right"></div>
+    </div>
 
-    function normHeader(h){ return String(h||'').replace(/^\uFEFF/,'').toLowerCase().replace(/[()]/g,'').replace(/\s+/g,' ').trim(); }
-    function extractNumber(val){ if(val==null) return NaN; const s=String(val).replace(',', '.'); const m=s.match(/[-+]?\d+(?:\.\d+)?/); return m?Number(m[0]):NaN; }
-    function detectDelimiter(line){ const cand=[',',';','\t','|']; let best=',',bestC=-1; for(const d of cand){let c=0; for(let i=0;i<line.length;i++){const ch=line[i]; if(ch===d){c++;}} if(c>bestC){best=d;bestC=c;}} return best; }
+    <div class="table-wrap card card-pad" style="margin-top:12px">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Polimero</th>
+            <th>Applicazione</th>
+            <th>Durezza</th>
+            <th>Materiale</th>
+            <th>Descrizione</th>
+          </tr>
+        </thead>
+        <tbody id="materials-body"></tbody>
+      </table>
+      <div id="materials-empty" class="muted" style="margin-top:8px;display:none">Nessun materiale corrispondente ai filtri.</div>
+    </div>
+  </section>
+</main>
 
-    // NEW: line-by-line parser (robust to CR/LF issues)
-    function parseCSV_lines(text){
-      const lines = text.split(/\r\n|\n|\r/).filter(l => l.length>0);
-      if(!lines.length) return [];
-      // detect delimiter on the most "column-rich" of the first 3 lines
-      let cand = lines.slice(0,3);
-      cand.sort((a,b)=>b.length-a.length);
-      const delim = detectDelimiter(cand[0]);
-      const rows = lines.map(line => {
-        let cur='', inQ=false, arr=[];
-        for(let i=0;i<line.length;i++){
-          const c=line[i], nx=line[i+1];
-          if(c==='\"'){ if(inQ && nx==='\"'){ cur+='\"'; i++; } else { inQ=!inQ; } }
-          else if(c===delim && !inQ){ arr.push(cur); cur=''; }
-          else { cur+=c; }
-        }
-        arr.push(cur);
-        return arr;
-      });
-      // drop fully-empty rows
-      return rows.filter(r => r.some(cell => String(cell).trim()!==''));
-    }
+<script>
+const CSV_PATH = "./data/materiali_database.csv";
+let rows = [];
+let cols = { polimero:null, applicazione:null, durezza:null, nome:null, descrizione:null };
 
-    function findHeaderRowIndex(rows){
-      // Skip banner row like "DATI di INPUT/OUTPUT"
-      for(let i=0;i<Math.min(rows.length, 10); i++){
-        const joined = rows[i].join(' ').toLowerCase();
-        if(joined.includes('dati di input') || joined.includes('dati di output')) continue;
-        const norm = rows[i].map(normHeader);
-        const hasTipologia = norm.some(h=>h.includes('tipologia') && h.includes('polimer'));
-        const hasApplicazione = norm.some(h=>h.includes('applicaz'));
-        if(hasTipologia && hasApplicazione) return i;
-      }
-      return 0;
-    }
+function $(s){ return document.querySelector(s); }
+function normKey(s){ return String(s||"").trim().toLowerCase(); }
 
-    function idxMap(headers){
-      function exact(label){ const t=normHeader(label); return headers.findIndex(h=>h===t); }
-      function fuzzy(...reqs){ for(const req of reqs){ const arr = Array.isArray(req)?req:[req]; const i=headers.findIndex(h => arr.every(k => h.includes(k))); if(i!==-1) return i; } return -1; }
-      return {
-        tipologia: (()=>{ let i=exact('Tipologia polimero'); if(i!==-1) return i; return fuzzy(['tipologia','polimer']); })(),
-        applicazione: (()=>{ let i=exact('Applicazione'); if(i!==-1) return i; return fuzzy('applicaz'); })(),
-        durezza: (()=>{ let i=exact('Durezza (ShA) - ISO 868'); if(i!==-1) return i; return fuzzy('durezza','shore a','sha'); })(),
-        sigla: (()=>{ let i=exact('Sigla'); if(i!==-1) return i; return fuzzy('sigla','grade','codice'); })(),
-        processo: (()=>{ let i=exact('Processo'); if(i!==-1) return i; return fuzzy('processo','lavoraz'); })(),
-        regulation: (()=>{ let i=exact('regulation'); if(i!==-1) return i; return fuzzy('regulation','normativa','conformita','conformità'); })(),
-        densita: (()=>{ let i=exact('Peso Specifico (g/cm3) ISO 1183-1'); if(i!==-1) return i; return fuzzy('peso specifico','densita','densità','1183'); })(),
-        carico: (()=>{ let i=exact('Carico di Rottura (N/mm2) ISO 527'); if(i!==-1) return i; return fuzzy('carico','rottu','resistenza trazione','527'); })(),
-        allung: (()=>{ let i=exact('Allungamento a Rottura (N/mm2) ISO 527'); if(i!==-1) return i; return fuzzy('allung','527'); })(),
-        cset: (()=>{ let i=exact('Compression Set (ASTM D 395) (22°C/72h)'); if(i!==-1) return i; return fuzzy('compression','set','astm','395'); })(),
-        features: (()=>{ let i=exact('special features'); if(i!==-1) return i; return fuzzy('special','note','caratterist'); })(),
-      };
-    }
+function mapColumns(header){
+  const map = {}; const H = header.map(h => ({raw:h, key:normKey(h)}));
+  function findOne(cands){ for (const h of H){ if (cands.includes(h.key)) return h.raw; } return null; }
+  map.polimero     = findOne(["polimero","polymer","categoria","categoria materiale","categoria_materiale"]);
+  map.applicazione = findOne(["applicazione","application","uso","use"]);
+  map.durezza      = findOne(["durezza","shore","shore a","shore_a","shorea","hardness","hardness (shore a)"]);
+  map.nome         = findOne(["materiale","nome","name","codice","product","material"]);
+  map.descrizione  = findOne(["descrizione","note","description","notes"]);
+  if (!map.nome) map.nome = header[0];
+  if (!map.descrizione) map.descrizione = header[1] || header[0];
+  cols = map;
+}
 
-    async function tryFetch(){
-      const tried=[];
-      for(const base of CSV_CANDIDATES){
-        const url=base + (base.includes('?')?'&':'?')+'v='+Date.now();
-        tried.push(url);
-        try{
-          const r=await fetch(url,{cache:'no-store'});
-          if(!r.ok) continue;
-          const text=await r.text();
-          if(text && text.trim()) return {text, url, tried};
-        }catch(e){ /* next */ }
-      }
-      return {text:null, url:null, tried};
-    }
+function unique(arr){
+  const s = new Set(arr.filter(Boolean).map(v => String(v).trim()).filter(v=>v));
+  return ["Tutte", ...Array.from(s).sort((a,b)=>a.localeCompare(b))];
+}
+function populateSelect(el, options){
+  el.innerHTML = "";
+  options.forEach(v => { const o=document.createElement("option"); o.value = (v==="Tutte")?"":v; o.textContent=v; el.appendChild(o); });
+}
 
-    function loadFromText(text, urlLabel){
-      const rows=parseCSV_lines(text);
-      if(rows.length<2) throw new Error('CSV vuoto.');
-      const headerRowIdx=findHeaderRowIndex(rows);
-      const headers=rows[headerRowIdx].map(normHeader);
-      const dataRows=rows.slice(headerRowIdx+1);
-
-      const idx=idxMap(headers);
-      const missing=Object.entries(idx).filter(([k,v])=>v===-1).map(([k])=>k);
-      if(missing.length){
-        throw new Error('Colonne mancanti: '+missing.join(', ')+'. Headers visti: ['+headers.join(' | ')+']');
-      }
-
-      DATA=dataRows.map(r=>({
-        tipologia:(r[idx.tipologia]||'').toString().trim(),
-        applicazione:(r[idx.applicazione]||'').toString().trim(),
-        durezza:extractNumber(r[idx.durezza]),
-        sigla:r[idx.sigla]||'',
-        processo:r[idx.processo]||'',
-        regulation:r[idx.regulation]||'',
-        densita:r[idx.densita]||'',
-        carico:r[idx.carico]||'',
-        allung:r[idx.allung]||'',
-        cset:r[idx.cset]||'',
-        features:r[idx.features]||''
+function loadCSV(){
+  Papa.parse(CSV_PATH, {
+    download: true, header: true, skipEmptyLines: true, dynamicTyping: true,
+    complete: function(res){
+      const data = res.data || [];
+      if (!data.length){ $("#materials-empty").style.display = "block"; return; }
+      mapColumns(res.meta.fields || Object.keys(data[0]));
+      rows = data.map(r => ({
+        polimero: String(r[cols.polimero] ?? "").trim(),
+        applicazione: String(r[cols.applicazione] ?? "").trim(),
+        durezza: String(r[cols.durezza] ?? "").trim(),
+        nome: String(r[cols.nome] ?? "").trim(),
+        descrizione: String(r[cols.descrizione] ?? "").trim()
       }));
+      populateSelect($("#f-polimero"), unique(rows.map(r=>r.polimero)));
+      populateSelect($("#f-applicazione"), unique(rows.map(r=>r.applicazione)));
+      populateSelect($("#f-durezza"), unique(rows.map(r=>r.durezza)));
+      $("#f-polimero").addEventListener("change", render);
+      $("#f-applicazione").addEventListener("change", render);
+      $("#f-durezza").addEventListener("change", render);
+      $("#f-search").addEventListener("input", render);
+      render();
+    },
+    error: function(err){ console.error(err); $("#materials-empty").style.display="block"; }
+  });
+}
 
-      diag.textContent='Origine CSV: '+urlLabel+' — '+DATA.length+' righe | intestazioni: '+headers.join(' · ');
-      initFilters(); render(DATA);
-    }
+function render(){
+  const fp = $("#f-polimero").value || null;
+  const fa = $("#f-applicazione").value || null;
+  const fd = $("#f-durezza").value || null;
+  const q  = ($("#f-search").value || "").toLowerCase();
 
-    let DATA=[];
-    (async function init(){
-      const {text, url, tried} = await tryFetch();
-      if(text){
-        try{
-          loadFromText(text, url);
-        }catch(err){
-          diag.textContent = 'Errore parsing: '+err.message+'\nProva a caricare il file localmente.';
-          uploader.style.display='block';
-        }
-      }else{
-        diag.textContent='Non riesco a scaricare il CSV dagli URL: \n'+tried.join('\n')+'\nCarica il file localmente qui sotto.';
-        uploader.style.display='block';
-      }
-    })();
+  const filtered = rows.filter(r => {
+    if (fp && r.polimero !== fp) return false;
+    if (fa && r.applicazione !== fa) return false;
+    if (fd && r.durezza !== fd) return false;
+    if (q && !(r.nome.toLowerCase().includes(q) || r.descrizione.toLowerCase().includes(q))) return false;
+    return true;
+  });
 
-    fileInput?.addEventListener('change', (e)=>{
-      const file = e.target.files?.[0];
-      if(!file) return;
-      const reader = new FileReader();
-      reader.onload = ()=>{
-        try{
-          loadFromText(String(reader.result), 'file locale: '+file.name);
-        }catch(err){
-          diag.textContent = 'Errore: '+err.message;
-        }
-      };
-      reader.readAsText(file);
-    });
+  const body = $("#materials-body"); body.innerHTML = "";
+  filtered.forEach((r, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${i+1}</td>
+      <td>${r.polimero}</td>
+      <td>${r.applicazione}</td>
+      <td>${r.durezza}</td>
+      <td><span class="badge">${r.nome}</span></td>
+      <td>${r.descrizione}</td>`;
+    body.appendChild(tr);
+  });
+  $("#materials-empty").style.display = filtered.length ? "none" : "block";
+}
 
-    function unique(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>a.localeCompare(b,'it',{sensitivity:'base'})); }
-    function initFilters(){ const tip=document.getElementById('f-tipologia'); const app=document.getElementById('f-app');
-      unique(DATA.map(d=>d.tipologia)).forEach(v=>{const o=document.createElement('option');o.value=o.textContent=v;tip.appendChild(o);});
-      unique(DATA.map(d=>d.applicazione)).forEach(v=>{const o=document.createElement('option');o.value=o.textContent=v;app.appendChild(o);});
-      document.getElementById('btn-filtra').addEventListener('click', applyFilters);
-      document.getElementById('btn-reset').addEventListener('click', ()=>{tip.value='';app.value='';document.getElementById('f-duro-min').value='';document.getElementById('f-duro-max').value='';render(DATA);});
-      document.getElementById('btn-export').addEventListener('click', exportCSV);
-    }
-    function applyFilters(){ const t=document.getElementById('f-tipologia').value.trim(); const a=document.getElementById('f-app').value.trim(); const min=document.getElementById('f-duro-min').value; const max=document.getElementById('f-duro-max').value;
-      const res=DATA.filter(d=>{ if(t&&d.tipologia!==t) return false; if(a&&d.applicazione!==a) return false; if(min!==''&&!(d.durezza>=Number(min))) return false; if(max!==''&&!(d.durezza<=Number(max))) return false; return true; });
-      render(res); }
-    function render(rows){ const tb=document.querySelector('#results tbody'); if(!rows.length){ tb.innerHTML='<tr><td colspan="8">Nessun risultato con i filtri correnti.</td></tr>'; document.getElementById('count').textContent='0'; return; }
-      tb.innerHTML=rows.map(d=>`<tr><td><strong>${escapeHtml(d.sigla)}</strong></td><td>${escapeHtml(d.processo)}</td><td><span class="pill">${escapeHtml(d.regulation)}</span></td><td>${escapeHtml(d.densita)}</td><td>${escapeHtml(d.carico)}</td><td>${escapeHtml(d.allung)}</td><td>${escapeHtml(d.cset)}</td><td>${escapeHtml(d.features)}</td></tr>`).join(''); document.getElementById('count').textContent=rows.length; }
-    function exportCSV(){ const header=['Sigla','Processo','regulation','Peso Specifico (g/cm3) ISO 1183-1','Carico di Rottura (N/mm2) ISO 527','Allungamento a Rottura (N/mm2) ISO 527','Compression Set (ASTM D 395) (22°C/72h)','special features'];
-      const rows=[...document.querySelectorAll('#results tbody tr')].map(tr=>[...tr.children].map(td=>td.innerText.replaceAll('\n',' ').trim()));
-      const csv=[header.join(','),...rows.map(r=>r.map(s=>`"${s.replaceAll('"','""')}"`).join(','))].join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='risultati_materiali.csv'; a.click(); URL.revokeObjectURL(url); }
-    function escapeHtml(str){ return String(str).replace(/[&<>\"']/g, s=>({"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;"}[s])); }
-  </script>
+document.addEventListener("DOMContentLoaded", loadCSV);
+</script>
 </body>
 </html>
