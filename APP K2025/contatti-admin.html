@@ -1,112 +1,176 @@
-<script>
-  // elementi UI
-  const TBL = document.querySelector('#tbl tbody');
-  const META = document.getElementById('meta');
-  const BTN_RELOAD = document.getElementById('btn-reload');
-  const BTN_EXPORT = document.getElementById('btn-export');
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Amministrazione – Contatti</title>
 
-  // stato
-  let DATA = [];
+  <!-- (facoltativo) font, per coerenza estetica con il sito -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet"/>
 
-  // helpers
-  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
-  function safeNum(x, def=""){ return x==null?def:String(x); }
+  <!-- XLSX per export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-  // normalizza un record Netlify Form (campi possono variare tra submission vecchie/nuove)
-  function normalize(sub){
-    const d = sub.data || {};
-    return {
-      created_at: sub.created_at || "",
-      nome: d.nome || sub.name || "",
-      cognome: d.cognome || "",
-      azienda: d.azienda || "",
-      email: d.email || sub.email || "",
-      categoria: d.categoria || "",
-      agente: d.agente || "",
-      regione: d.regione || "",
-      polimero: d.polimero || "",
-      processo: d.processo || "",
-      applicazione: d.applicazione || "",
-      note: d.note || "",
-      supabase_id: d.supabase_id || "",
-      images_urls: d.supabase_image_urls || d.files || "",
-    };
-  }
+  <style>
+    :root{ --bg:#0f172a; --card:#0b1220; --muted:#94a3b8; --text:#e5e7eb; --border:#1f2937; --accent:#22c55e; }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    .container{max-width:1100px;margin:0 auto;padding:16px}
+    h1{font-size:20px;margin:10px 0}
+    .card{background:linear-gradient(180deg,#0b1220,#0b1220f0);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:0 10px 40px #0006}
+    .tools{display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap}
+    .btn{display:inline-flex;gap:8px;align-items:center;justify-content:center;padding:8px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb;cursor:pointer;font-weight:600}
+    .btn:hover{filter:brightness(1.1)}
+    .btn-outline{background:transparent}
+    .muted{color:var(--muted)}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid #1f2937;padding:10px 8px;text-align:left;vertical-align:top;font-size:14px}
+    th{position:sticky;top:0;background:#0b1220}
+    tr:hover td{background:#0b122088}
+    code.small{font-size:12px;color:#cbd5e1;background:#0a0f1d;border:1px solid #1e293b;padding:1px 4px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Amministrazione — Contatti</h1>
+      <div class="tools">
+        <button id="btn-reload" class="btn">Ricarica</button>
+        <button id="btn-export" class="btn btn-outline">Esporta XLSX</button>
+        <span id="meta" class="muted"></span>
+      </div>
 
-  async function load(){
-    META.textContent = "Carico…";
-    TBL.innerHTML = "<tr><td colspan='8'>Caricamento…</td></tr>";
+      <div class="table-wrap">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>Creato il</th>
+              <th>Nome</th>
+              <th>Cognome</th>
+              <th>Azienda</th>
+              <th>Email</th>
+              <th>Categoria</th>
+              <th>Agente</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
 
-    try{
-      const r = await fetch('/.netlify/functions/get-submissions', { headers: { 'Accept':'application/json' }});
-      const ct = (r.headers.get('content-type') || '').toLowerCase();
+      <p class="muted" style="margin-top:10px">
+        Fonte: <code class="small">/.netlify/functions/get-submissions</code>
+      </p>
+    </div>
+  </div>
 
-      // se NON è JSON (es. 404 HTML), mostro errore leggibile
-      if (!ct.includes('application/json')){
-        const text = await r.text();
-        throw new Error("Endpoint non JSON (probabile 404 delle Functions). Anteprima:\n" + text.slice(0,200));
-      }
+  <!-- Script “robusto”: aspetta DOM, verifica elementi, gestisce errori JSON/HTML -->
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const META = document.getElementById("meta");
+    const TBL = document.querySelector("#tbl tbody");
+    const BTN_RELOAD = document.getElementById("btn-reload");
+    const BTN_EXPORT = document.getElementById("btn-export");
+    let DATA = [];
 
-      const payload = await r.json();
-      if (!r.ok) throw new Error(payload.error || 'Errore API');
-
-      const subs = Array.isArray(payload.submissions) ? payload.submissions : [];
-      DATA = subs.map(normalize);
-
-      META.textContent = `${payload.form_name || 'contatti'} — ${DATA.length} voci`;
-      render(DATA);
-    }catch(err){
-      console.error(err);
-      META.textContent = "Errore: " + err.message;
-      TBL.innerHTML = "<tr><td colspan='8'>Errore durante il caricamento. Apri la console per i dettagli.</td></tr>";
+    if (!META || !TBL || !BTN_RELOAD || !BTN_EXPORT) {
+      console.error("[Admin] Elementi mancanti:", { META, TBL, BTN_RELOAD, BTN_EXPORT });
+      alert("Errore: elementi base mancanti nella pagina (meta/tabella/bottoni).");
+      return;
     }
-  }
 
-  function render(rows){
-    TBL.innerHTML = "";
-    rows.forEach(s => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${escapeHtml(safeNum(s.created_at))}</td>
-        <td>${escapeHtml(safeNum(s.nome))}</td>
-        <td>${escapeHtml(safeNum(s.cognome))}</td>
-        <td>${escapeHtml(safeNum(s.azienda))}</td>
-        <td>${escapeHtml(safeNum(s.email))}</td>
-        <td>${escapeHtml(safeNum(s.categoria))}</td>
-        <td>${escapeHtml(safeNum(s.agente))}</td>
-        <td title="${escapeHtml(s.note)}">${escapeHtml((s.note||"").slice(0,60))}${(s.note||"").length>60?"…":""}</td>
-      `;
-      TBL.appendChild(tr);
-    });
-  }
+    function escapeHtml(s){ return String(s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
+    function safe(v){ return v==null ? "" : String(v); }
 
-  function exportXLSX(){
-    if (!DATA.length) { alert("Niente da esportare."); return; }
-    const rows = DATA.map(s => ({
-      "Creato il": s.created_at,
-      "Nome": s.nome,
-      "Cognome": s.cognome,
-      "Azienda": s.azienda,
-      "Email": s.email,
-      "Categoria": s.categoria,
-      "Agente": s.agente,
-      "Regione": s.regione,
-      "Polimero": s.polimero,
-      "Processo": s.processo,
-      "Applicazione": s.applicazione,
-      "Note": s.note,
-      "Supabase ID": s.supabase_id,
-      "Immagini URL": s.images_urls
-    }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Contatti");
-    XLSX.writeFile(wb, "contatti.xlsx");
-  }
+    function normalize(sub){
+      const d = sub.data || {};
+      return {
+        created_at: sub.created_at || "",
+        nome: d.nome || sub.name || "",
+        cognome: d.cognome || "",
+        azienda: d.azienda || "",
+        email: d.email || sub.email || "",
+        categoria: d.categoria || "",
+        agente: d.agente || "",
+        regione: d.regione || "",
+        polimero: d.polimero || "",
+        processo: d.processo || "",
+        applicazione: d.applicazione || "",
+        note: d.note || "",
+        supabase_id: d.supabase_id || "",
+        images_urls: d.supabase_image_urls || d.files || ""
+      };
+    }
 
-  BTN_RELOAD && BTN_RELOAD.addEventListener('click', load);
-  BTN_EXPORT && BTN_EXPORT.addEventListener('click', exportXLSX);
+    async function load(){
+      META.textContent = "Carico…";
+      TBL.innerHTML = "<tr><td colspan='8'>Caricamento…</td></tr>";
+      try {
+        const r = await fetch("/.netlify/functions/get-submissions", { headers: { Accept: "application/json" }});
+        const ct = (r.headers.get("content-type") || "").toLowerCase();
+        if (!ct.includes("application/json")) {
+          const txt = await r.text();
+          throw new Error("Endpoint non JSON (probabile 404 funzioni). Anteprima: " + txt.slice(0,200));
+        }
+        const payload = await r.json();
+        if (!r.ok) throw new Error(payload.error || "Errore API");
+        DATA = (payload.submissions || []).map(normalize);
+        META.textContent = `${payload.form_name || "contatti"} — ${DATA.length} voci`;
+        render(DATA);
+      } catch (err) {
+        console.error(err);
+        META.textContent = "Errore: " + err.message;
+        TBL.innerHTML = "<tr><td colspan='8'>Errore, vedi console.</td></tr>";
+      }
+    }
 
-  // avvio
-  load();
-</script>
+    function render(rows){
+      TBL.innerHTML = "";
+      rows.forEach(s => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${escapeHtml(safe(s.created_at))}</td>
+          <td>${escapeHtml(safe(s.nome))}</td>
+          <td>${escapeHtml(safe(s.cognome))}</td>
+          <td>${escapeHtml(safe(s.azienda))}</td>
+          <td>${escapeHtml(safe(s.email))}</td>
+          <td>${escapeHtml(safe(s.categoria))}</td>
+          <td>${escapeHtml(safe(s.agente))}</td>
+          <td title="${escapeHtml(s.note)}">${escapeHtml((s.note||"").slice(0,60))}${(s.note||"").length>60?"…":""}</td>
+        `;
+        TBL.appendChild(tr);
+      });
+    }
+
+    function exportXLSX(){
+      if (!DATA.length) { alert("Niente da esportare."); return; }
+      const rows = DATA.map(s => ({
+        "Creato il": s.created_at,
+        "Nome": s.nome,
+        "Cognome": s.cognome,
+        "Azienda": s.azienda,
+        "Email": s.email,
+        "Categoria": s.categoria,
+        "Agente": s.agente,
+        "Regione": s.regione,
+        "Polimero": s.polimero,
+        "Processo": s.processo,
+        "Applicazione": s.applicazione,
+        "Note": s.note,
+        "Supabase ID": s.supabase_id,
+        "Immagini URL": s.images_urls
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Contatti");
+      XLSX.writeFile(wb, "contatti.xlsx");
+    }
+
+    BTN_RELOAD.addEventListener("click", load);
+    BTN_EXPORT.addEventListener("click", exportXLSX);
+    load();
+  });
+  </script>
+</body>
+</html>
