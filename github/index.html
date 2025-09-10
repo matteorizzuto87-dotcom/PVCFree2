@@ -536,32 +536,38 @@ function closeModal(){ document.getElementById('modal').classList.remove('open')
 // ============ MATERIALS ============
 async function loadMaterials(){
   const cat = document.getElementById('matCat').value;
-  // Prova Supabase -> fallback CSV locale /data/materiali_database.csv
-  try {
-    let query = supabaseClient.from('materials').select('id,categoria,nome,descrizione').order('created_at',{ascending:false});
-    if (cat) query = query.eq('categoria',cat);
-    const { data: rows, error } = await query;
-    if (error) throw error;
-    renderMaterials(rows||[]);
-  } catch(e){
-    try{
-      const resp = await fetch('/data/materiali_database.csv');
-      if (!resp.ok) throw new Error('CSV non trovato');
-      const txt = await resp.text();
-      const lines = txt.split(/\r?\n/).filter(Boolean);
-      // autodetect delimitatore: ; o ,
-      const delim = (txt.indexOf(';')>-1 && txt.indexOf(',')===-1) ? ';' : ',';
-      const headers = (lines.shift()||'').split(delim).map(s=>s.trim());
-      const items = lines.map(l=>{
-        const cols = l.split(delim).map(s=>s.trim());
-        const row = {}; headers.forEach((h,i)=>row[h]=cols[i]||'');
-        return row;
-      }).filter(x => !cat || String(x.categoria||x.Categoria||'')===cat);
-      renderMaterials(items.map((x,i)=>({ id:i+1, categoria: x.categoria||x.Categoria||'', nome: x.nome||x.Nome||'', descrizione: x.descrizione||x.Descrizione||'' })));
-    }catch(err){
-      const body = document.getElementById('matBody');
-      body.innerHTML = '<tr><td colspan="4">Errore caricamento materiali</td></tr>';
-    }
+  try{
+    const resp = await fetch('/data/materiali_database.csv', { cache: 'no-store' });
+    if (!resp.ok) throw new Error('CSV non trovato');
+    const txt = await resp.text();
+    const lines = txt.split(/
+?
+/).filter(l=>l.trim().length>0);
+    if (lines.length === 0){ renderMaterials([]); return; }
+    // autodetect delimitatore: preferisci ";" se presente in header
+    const headerLine = lines.shift();
+    const delim = headerLine.includes(';') && !headerLine.includes(',') ? ';' : ',';
+    const headers = headerLine.split(delim).map(s=>s.trim());
+    const idx = {
+      categoria: headers.findIndex(h => /categoria/i.test(h)),
+      nome: headers.findIndex(h => /nome/i.test(h)),
+      descrizione: headers.findIndex(h => /descriz/i.test(h))
+    };
+    const rows = lines.map((l, i) => {
+      const cols = l.split(delim).map(s=>s.trim());
+      const rec = {
+        categoria: idx.categoria>=0 ? cols[idx.categoria] || '' : '',
+        nome: idx.nome>=0 ? cols[idx.nome] || '' : '',
+        descrizione: idx.descrizione>=0 ? cols[idx.descrizione] || '' : ''
+      };
+      rec.__i = i+1;
+      return rec;
+    }).filter(r => !cat || String(r.categoria) === cat);
+    renderMaterials(rows);
+  }catch(err){
+    console.warn('Errore CSV materiali:', err);
+    const body = document.getElementById('matBody');
+    body.innerHTML = '<tr><td colspan="4">Errore caricamento materiali</td></tr>';
   }
 }
 function renderMaterials(rows){
