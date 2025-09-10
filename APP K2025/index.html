@@ -527,33 +527,9 @@
     <div id="gateMsg" style="color:#f87171;margin-top:6px;font-size:12px"></div>
   </div>
 </div>
-
-
-<script>
-(function(){
-  function unlock() {
-    var pwEl = document.getElementById('sharedPw');
-    var msg = document.getElementById('gateMsg');
-    var val = (pwEl && pwEl.value) ? pwEl.value.trim() : "";
-    if (val === "Elicottero64") {
-      sessionStorage.setItem('k2025_gate','ok');
-      var g = document.getElementById('gate'); if (g) g.style.display='none';
-    } else {
-      if (msg) msg.textContent = "Password errata";
-    }
-  }
-  function setUp() {
-    var gate = document.getElementById('gate');
-    if (!gate) return;
-    var ok = sessionStorage.getItem('k2025_gate') === 'ok';
-    if (!ok) { gate.style.display = 'grid'; }
-    var btn = document.getElementById('gateBtn'); if (btn) btn.onclick = unlock;
-    var clr = document.getElementById('gateClear'); if (clr) clr.onclick = function(){ var p=document.getElementById('sharedPw'); if(p){p.value=''; p.focus();} };
-    var input = document.getElementById('sharedPw'); if (input) input.addEventListener('keydown', function(e){ if (e.key === 'Enter') unlock(); });
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setUp); else setUp();
-})();
-</script>
+  
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="./pvcfree_script_clean.js"></script>
 
 </body>
 </html>
