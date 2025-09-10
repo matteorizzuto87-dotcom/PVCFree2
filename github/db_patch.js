@@ -1,14 +1,10 @@
-
-// === PVC-FREE K2025 — Database runtime patch ===
-// Scopo: sostituire SOLO la sezione "Database Materiali" di index.html al volo,
-// mantenendo grafica e contatti intatti.
-//
-// Requisiti: cartella ./data/materiali_database.csv esistente
-
+// === PVC-FREE K2025 — Database runtime patch (v2) ===
 (function(){
+  // Neutralize old loadMaterials to avoid null.value errors
+  window.loadMaterials = function(){ /* patched no-op */ };
+
   const CSV_PATH = "./data/materiali_database.csv";
 
-  // Carica PapaParse se non presente
   function ensurePapa(cb){
     if (window.Papa && typeof window.Papa.parse === "function") return cb();
     const s = document.createElement("script");
@@ -17,7 +13,6 @@
     document.head.appendChild(s);
   }
 
-  // Normalizzazioni/utility
   const norm = s => String(s||"").toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
     .replace(/\s+/g," ").trim();
@@ -52,13 +47,12 @@
     }
     return null;
   }
-
   function mapColumns(header){
     return {
       polimero:    findCol(header, COLS.polimero),
       applicazione:findCol(header, COLS.applicazione),
       durezza:     findCol(header, COLS.durezza),
-      sigla:       findCol(header, COLS.sigla) || header[0],
+      sigla:       findCol(header, COLS.sigla) || (header[0] || "Sigla"),
       processo:    findCol(header, COLS.processo),
       regulation:  findCol(header, COLS.regulation),
       peso:        findCol(header, COLS.peso),
@@ -69,15 +63,15 @@
     };
   }
 
-  function buildUI(container){
-    container.innerHTML = `
+  function buildUI(section){
+    if (section.querySelector("#materials-body")) return; // already built
+    section.innerHTML = `
       <div style="display:flex;justify-content:flex-end;margin:6px 0">
         <img src="./assets/sft-polymer.png" alt="SFT Polymer" style="height:26px"/>
       </div>
       <div class="card card-pad">
         <h2 style="margin-top:0">Database Materiali</h2>
         <div class="muted">— scegli tra i materiali a disposizione</div>
-
         <div class="grid" style="margin-top:12px">
           <div class="col-4">
             <label>Tipologia polimero</label>
@@ -107,7 +101,6 @@
             <input id="f-hard-max" type="number" min="0" max="100" placeholder="max"/>
           </div>
         </div>
-
         <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
           <button class="btn btn-primary" id="btn-apply">Applica</button>
           <button class="btn btn-outline" id="btn-reset">Reset</button>
@@ -116,7 +109,6 @@
           <div class="right muted">Sorgente: <code>./data/materiali_database.csv</code></div>
         </div>
       </div>
-
       <div class="table-wrap card card-pad" style="margin-top:12px">
         <table>
           <thead>
@@ -140,29 +132,15 @@
 
   function setup(){
     const section = document.querySelector("#view-materials");
-    if (!section) return; // niente da fare
+    if (!section) return;
     buildUI(section);
 
     let allRows = [];
     let filteredRows = [];
 
-    function exportCSV(){
-      if (!filteredRows.length){ alert("Nessun dato da esportare."); return; }
-      const header = ["Sigla","Processo","regulation","Peso Specifico (g/cm3) ISO 1183-1","Carico di Rottura (N/mm2) ISO 527","Allungamento a Rottura (N/mm2) ISO 527","Compression Set (ASTM D 395) (22°C/72h)","special features"];
-      const csv = [header.join(";")].concat(filteredRows.map(r => [
-        r.sigla ?? "", r.processo ?? "", r.regulation ?? "", r.peso ?? "",
-        r.carico ?? "", r.allung ?? "", r.compress ?? "", r.special ?? ""
-      ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(";"))).join("\n");
-
-      const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "Materiali_filtrati.csv";
-      document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 200);
-    }
-
     function render(){
       const body = document.getElementById("materials-body");
+      if (!body) return;
       body.innerHTML = "";
       filteredRows.forEach(r => {
         const tr = document.createElement("tr");
@@ -176,15 +154,23 @@
           <td>${r.special ?? ""}</td>`;
         body.appendChild(tr);
       });
-      document.getElementById("materials-empty").style.display = filteredRows.length ? "none" : "block";
-      document.getElementById("result-count").textContent = `${filteredRows.length} risultati`;
+      const empty = document.getElementById("materials-empty");
+      if (empty) empty.style.display = filteredRows.length ? "none" : "block";
+      const count = document.getElementById("result-count");
+      if (count) count.textContent = `${filteredRows.length} risultati`;
     }
 
     function applyFilters(){
-      const fp = norm(document.getElementById("f-polimero").value);
-      const fa = norm(document.getElementById("f-applicazione").value);
-      const hmin = parseFloat(document.getElementById("f-hard-min").value || "0");
-      const hmax = parseFloat(document.getElementById("f-hard-max").value || "100");
+      const fpEl = document.getElementById("f-polimero");
+      const faEl = document.getElementById("f-applicazione");
+      const minEl = document.getElementById("f-hard-min");
+      const maxEl = document.getElementById("f-hard-max");
+      if (!fpEl || !faEl || !minEl || !maxEl) return;
+
+      const fp = norm(fpEl.value);
+      const fa = norm(faEl.value);
+      const hmin = parseFloat(minEl.value || "0");
+      const hmax = parseFloat(maxEl.value || "100");
 
       filteredRows = allRows.filter(r => {
         if (fp && norm(r.polimero) !== fp) return false;
@@ -198,19 +184,34 @@
     }
 
     function resetFilters(){
-      document.getElementById("f-polimero").value = "";
-      document.getElementById("f-applicazione").value = "";
+      const minEl = document.getElementById("f-hard-min");
+      const maxEl = document.getElementById("f-hard-max");
       const hs = allRows.map(r => toNumber(r.durezza)).filter(v => !isNaN(v));
-      document.getElementById("f-hard-min").value = hs.length ? Math.floor(Math.min.apply(null, hs)) : 0;
-      document.getElementById("f-hard-max").value = hs.length ? Math.ceil(Math.max.apply(null, hs)) : 100;
+      if (minEl) minEl.value = hs.length ? Math.floor(Math.min.apply(null, hs)) : 0;
+      if (maxEl) maxEl.value = hs.length ? Math.ceil(Math.max.apply(null, hs)) : 100;
+      const fpEl = document.getElementById("f-polimero"); if (fpEl) fpEl.value = "";
+      const faEl = document.getElementById("f-applicazione"); if (faEl) faEl.value = "";
       applyFilters();
     }
 
-    document.getElementById("btn-apply").addEventListener("click", applyFilters);
-    document.getElementById("btn-reset").addEventListener("click", resetFilters);
-    document.getElementById("btn-export").addEventListener("click", exportCSV);
+    function exportCSV(){
+      if (!filteredRows.length){ alert("Nessun dato da esportare."); return; }
+      const header = ["Sigla","Processo","regulation","Peso Specifico (g/cm3) ISO 1183-1","Carico di Rottura (N/mm2) ISO 527","Allungamento a Rottura (N/mm2) ISO 527","Compression Set (ASTM D 395) (22°C/72h)","special features"];
+      const csv = [header.join(";")].concat(filteredRows.map(r => [
+        r.sigla ?? "", r.processo ?? "", r.regulation ?? "", r.peso ?? "",
+        r.carico ?? "", r.allung ?? "", r.compress ?? "", r.special ?? ""
+      ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(";"))).join("\n");
+      const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "Materiali_filtrati.csv";
+      document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 200);
+    }
 
-    // Carica CSV
+    const btnApply = document.getElementById("btn-apply"); if (btnApply) btnApply.addEventListener("click", applyFilters);
+    const btnReset = document.getElementById("btn-reset"); if (btnReset) btnReset.addEventListener("click", resetFilters);
+    const btnExport = document.getElementById("btn-export"); if (btnExport) btnExport.addEventListener("click", exportCSV);
+
     window.Papa.parse(CSV_PATH, {
       download: true, header: true, skipEmptyLines: true, dynamicTyping: false,
       complete: function(res){
@@ -234,16 +235,18 @@
       },
       error: function(err){
         console.error(err);
-        document.getElementById("materials-empty").style.display = "block";
+        const empty = document.getElementById("materials-empty");
+        if (empty) empty.style.display = "block";
       }
     });
   }
 
   function start(){
-    const section = document.querySelector("#view-materials");
-    if (!section) return;
+    if (window.__dbPatchLoaded) return;
+    window.__dbPatchLoaded = true;
     ensurePapa(setup);
   }
+
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
   else start();
 })();
