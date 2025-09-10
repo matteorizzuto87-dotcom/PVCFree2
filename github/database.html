@@ -57,19 +57,30 @@
     <div class="grid">
       <div class="col-3">
         <label>Polimero</label>
-        <select id="f-polimero"></select>
+        <select id="f-polimero">
+          <option value="">Tutti</option>
+          <option value="TPE-S">TPE-S</option>
+          <option value="BIO">BIO</option>
+          <option value="TPU">TPU</option>
+          <option value="TPO">TPO</option>
+        </select>
       </div>
       <div class="col-3">
         <label>Applicazione</label>
-        <select id="f-applicazione"></select>
+        <select id="f-applicazione">
+          <option value="">Tutte</option>
+          <option value="tecnico">tecnico</option>
+          <option value="biodegradabile">biodegradabile</option>
+          <option value="medicale">medicale</option>
+        </select>
       </div>
       <div class="col-3">
-        <label>Durezza (Shore A)</label>
-        <select id="f-durezza"></select>
+        <label>Durezza (Shore A) — da</label>
+        <input id="f-hard-min" type="number" placeholder="min" min="0" max="100"/>
       </div>
       <div class="col-3">
-        <label>&nbsp;</label>
-        <input id="f-search" placeholder="Cerca per nome/descrizione…"/>
+        <label>…a</label>
+        <input id="f-hard-max" type="number" placeholder="max" min="0" max="100"/>
       </div>
     </div>
 
@@ -83,11 +94,13 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>Polimero</th>
-            <th>Applicazione</th>
-            <th>Durezza</th>
-            <th>Materiale</th>
-            <th>Descrizione</th>
+            <th>Processo</th>
+            <th>regulation</th>
+            <th>Peso Specifico (g/cm3) ISO 1183-1</th>
+            <th>Carico di Rottura (N/mm2) ISO 527</th>
+            <th>Allungamento a Rottura (N/mm2) ISO 527</th>
+            <th>Compression Set (ASTM D 395) (22°C/72h)</th>
+            <th>special features</th>
           </tr>
         </thead>
         <tbody id="materials-body"></tbody>
@@ -99,55 +112,83 @@
 
 <script>
 const CSV_PATH = "./data/materiali_database.csv";
+
 let rows = [];
-let cols = { polimero:null, applicazione:null, durezza:null, nome:null, descrizione:null };
+let cols = {
+  polimero:null, applicazione:null, durezza:null,
+  processo:null, regulation:null, peso:null, carico:null, allungamento:null, compress:null, special:null
+};
 
 function $(s){ return document.querySelector(s); }
-function normKey(s){ return String(s||"").trim().toLowerCase(); }
+function normalizeKey(s){
+  return String(s||"").toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/\s+/g," ").trim();
+}
+function pick(header, candidates){
+  const H = header.map(h => ({raw:h, key:normalizeKey(h)}));
+  for (const cand of candidates){
+    for (const h of H){
+      if (h.key.includes(cand)) return h.raw;
+    }
+  }
+  return null;
+}
 
 function mapColumns(header){
-  const map = {}; const H = header.map(h => ({raw:h, key:normKey(h)}));
-  function findOne(cands){ for (const h of H){ if (cands.includes(h.key)) return h.raw; } return null; }
-  map.polimero     = findOne(["polimero","polymer","categoria","categoria materiale","categoria_materiale"]);
-  map.applicazione = findOne(["applicazione","application","uso","use"]);
-  map.durezza      = findOne(["durezza","shore","shore a","shore_a","shorea","hardness","hardness (shore a)"]);
-  map.nome         = findOne(["materiale","nome","name","codice","product","material"]);
-  map.descrizione  = findOne(["descrizione","note","description","notes"]);
-  if (!map.nome) map.nome = header[0];
-  if (!map.descrizione) map.descrizione = header[1] || header[0];
-  cols = map;
+  cols.polimero     = pick(header, ["polimero","polymer","categoria materiale","categoria","famiglia","tipo"]);
+  cols.applicazione = pick(header, ["applicazione","application","uso","use"]);
+  cols.durezza      = pick(header, ["durezza","shore a","shorea","shore","hardness"]);
+  cols.processo     = pick(header, ["processo","process"]);
+  cols.regulation   = pick(header, ["regulation","regolazione","normativa","compliance"]);
+  cols.peso         = pick(header, ["peso specifico","densita","density","g/cm3"]);
+  cols.carico       = pick(header, ["carico di rottura","tensile strength","iso 527"]);
+  cols.allungamento = pick(header, ["allungamento","elongazione","elongation"]);
+  cols.compress     = pick(header, ["compression set","astm d 395","compress"]);
+  cols.special      = pick(header, ["special features","features","caratteristiche","note speciali","note"]);
 }
 
-function unique(arr){
-  const s = new Set(arr.filter(Boolean).map(v => String(v).trim()).filter(v=>v));
-  return ["Tutte", ...Array.from(s).sort((a,b)=>a.localeCompare(b))];
-}
-function populateSelect(el, options){
-  el.innerHTML = "";
-  options.forEach(v => { const o=document.createElement("option"); o.value = (v==="Tutte")?"":v; o.textContent=v; el.appendChild(o); });
+function toNumber(x){
+  if (x === null || x === undefined) return NaN;
+  let s = String(x).toLowerCase().replace(",", ".");
+  const m = s.match(/(\d+(\.\d+)?)/);
+  return m ? parseFloat(m[1]) : NaN;
 }
 
 function loadCSV(){
   Papa.parse(CSV_PATH, {
-    download: true, header: true, skipEmptyLines: true, dynamicTyping: true,
+    download: true, header: true, skipEmptyLines: true, dynamicTyping: false,
     complete: function(res){
       const data = res.data || [];
       if (!data.length){ $("#materials-empty").style.display = "block"; return; }
-      mapColumns(res.meta.fields || Object.keys(data[0]));
+      const header = res.meta.fields || Object.keys(data[0]);
+      mapColumns(header);
+
       rows = data.map(r => ({
-        polimero: String(r[cols.polimero] ?? "").trim(),
-        applicazione: String(r[cols.applicazione] ?? "").trim(),
-        durezza: String(r[cols.durezza] ?? "").trim(),
-        nome: String(r[cols.nome] ?? "").trim(),
-        descrizione: String(r[cols.descrizione] ?? "").trim()
+        polimero:     r[cols.polimero],
+        applicazione: r[cols.applicazione],
+        durezza:      r[cols.durezza],
+        processo:     r[cols.processo],
+        regulation:   r[cols.regulation],
+        peso:         r[cols.peso],
+        carico:       r[cols.carico],
+        allungamento: r[cols.allungamento],
+        compress:     r[cols.compress],
+        special:      r[cols.special]
       }));
-      populateSelect($("#f-polimero"), unique(rows.map(r=>r.polimero)));
-      populateSelect($("#f-applicazione"), unique(rows.map(r=>r.applicazione)));
-      populateSelect($("#f-durezza"), unique(rows.map(r=>r.durezza)));
+
+      const hardnessValues = rows.map(r => toNumber(r.durezza)).filter(v => !isNaN(v));
+      const min = Math.min.apply(null, hardnessValues.length ? hardnessValues : [0]);
+      const max = Math.max.apply(null, hardnessValues.length ? hardnessValues : [100]);
+      const minEl = $("#f-hard-min"), maxEl = $("#f-hard-max");
+      if (minEl) minEl.value = Math.max(0, Math.floor(min));
+      if (maxEl) maxEl.value = Math.min(100, Math.ceil(max));
+
       $("#f-polimero").addEventListener("change", render);
       $("#f-applicazione").addEventListener("change", render);
-      $("#f-durezza").addEventListener("change", render);
-      $("#f-search").addEventListener("input", render);
+      $("#f-hard-min").addEventListener("input", render);
+      $("#f-hard-max").addEventListener("input", render);
+
       render();
     },
     error: function(err){ console.error(err); $("#materials-empty").style.display="block"; }
@@ -155,16 +196,17 @@ function loadCSV(){
 }
 
 function render(){
-  const fp = $("#f-polimero").value || null;
-  const fa = $("#f-applicazione").value || null;
-  const fd = $("#f-durezza").value || null;
-  const q  = ($("#f-search").value || "").toLowerCase();
+  const fp = ($("#f-polimero").value || "").toLowerCase();
+  const fa = ($("#f-applicazione").value || "").toLowerCase();
+  const hmin = parseFloat($("#f-hard-min").value || "0");
+  const hmax = parseFloat($("#f-hard-max").value || "100");
 
   const filtered = rows.filter(r => {
-    if (fp && r.polimero !== fp) return false;
-    if (fa && r.applicazione !== fa) return false;
-    if (fd && r.durezza !== fd) return false;
-    if (q && !(r.nome.toLowerCase().includes(q) || r.descrizione.toLowerCase().includes(q))) return false;
+    if (fp && String(r.polimero||"").toLowerCase() !== fp) return false;
+    if (fa && String(r.applicazione||"").toLowerCase() !== fa) return false;
+    const hv = toNumber(r.durezza);
+    if (!isNaN(hmin) && hv < hmin) return false;
+    if (!isNaN(hmax) && hv > hmax) return false;
     return true;
   });
 
@@ -172,11 +214,13 @@ function render(){
   filtered.forEach((r, i) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td>${i+1}</td>
-      <td>${r.polimero}</td>
-      <td>${r.applicazione}</td>
-      <td>${r.durezza}</td>
-      <td><span class="badge">${r.nome}</span></td>
-      <td>${r.descrizione}</td>`;
+      <td>${r.processo ?? ""}</td>
+      <td>${r.regulation ?? ""}</td>
+      <td>${r.peso ?? ""}</td>
+      <td>${r.carico ?? ""}</td>
+      <td>${r.allungamento ?? ""}</td>
+      <td>${r.compress ?? ""}</td>
+      <td>${r.special ?? ""}</td>`;
     body.appendChild(tr);
   });
   $("#materials-empty").style.display = filtered.length ? "none" : "block";
