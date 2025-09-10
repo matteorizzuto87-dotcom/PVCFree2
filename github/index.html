@@ -4,290 +4,169 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PVC-FREE K2025 contatti e database</title>
-  <!-- Tailwind (CDN) -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Papa Parse (CSV) -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    html,body{height:100%;}
-    body{font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";}
-    .chip{border-radius:9999px;padding:.25rem .65rem;border:1px solid rgba(255,255,255,.12);}
-    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.25);}
-    .table-sticky thead th{position:sticky;top:0;background-color:#0b1220;z-index:1}
+    body { font-family: system-ui, sans-serif; }
+    .table-sticky thead th { position: sticky; top: 0; background: #0f172a; }
   </style>
 </head>
-<body class="min-h-full bg-slate-900 text-slate-100">
-  <header class="sticky top-0 z-30 border-b border-slate-800/80 backdrop-blur bg-slate-900/80">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
-      <img alt="TPV Polymer" src="/logo.png" class="h-6 w-auto" onerror="this.style.display='none'"/>
-      <h1 class="text-sm sm:text-base font-semibold tracking-tight">PVC-FREE K2025 contatti e database</h1>
-      <nav class="ml-auto flex items-center gap-2">
-        <button id="tabContatti" class="chip hover:bg-slate-800" type="button">Contatti</button>
-        <button id="tabDatabase" class="chip bg-emerald-500/15 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25" type="button">Database Materiali</button>
-      </nav>
-      <a id="newContactBtn" href="#contatti" class="hidden sm:inline-flex ml-2 px-3 py-1.5 rounded-2xl bg-emerald-500 text-slate-900 font-semibold shadow-soft hover:opacity-95">+ Nuovo contatto</a>
-    </div>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+  <header class="border-b border-slate-800 p-4 flex items-center gap-4">
+    <h1 class="text-lg font-bold">PVC-FREE K2025 contatti e database</h1>
+    <nav class="ml-auto flex gap-2">
+      <button id="btnContatti" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700">Contatti</button>
+      <button id="btnDatabase" class="px-3 py-1 rounded bg-emerald-600 text-slate-900 font-semibold">Database Materiali</button>
+    </nav>
+    <a href="#" class="ml-2 px-3 py-1 rounded bg-emerald-500 text-slate-900 font-semibold">+ Nuovo contatto</a>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 pb-28">
-    <!-- DATABASE VIEW -->
-    <section id="dbView" class="pt-8">
-      <h2 class="text-2xl sm:text-3xl font-semibold">Database Materiali — <span class="font-normal text-slate-300">scegli tra i materiali a disposizione</span></h2>
-
-      <!-- Controls -->
-      <div class="mt-6 rounded-2xl border border-slate-800 bg-slate-950/40 p-4 sm:p-6">
-        <div class="grid grid-cols-12 gap-3 sm:gap-4 items-end">
-          <div class="col-span-12 sm:col-span-3">
-            <label class="text-xs uppercase tracking-wide text-slate-400">Tipologia polimero</label>
-            <select id="fTipo" class="mt-1 w-full rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              <option value="">Tutte</option>
-            </select>
-          </div>
-          <div class="col-span-12 sm:col-span-3">
-            <label class="text-xs uppercase tracking-wide text-slate-400">Applicazione</label>
-            <select id="fApp" class="mt-1 w-full rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              <option value="">Tutte</option>
-            </select>
-          </div>
-          <div class="col-span-12 sm:col-span-3">
-            <label class="text-xs uppercase tracking-wide text-slate-400">Processo</label>
-            <select id="fProc" class="mt-1 w-full rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              <option value="">Tutti</option>
-            </select>
-          </div>
-          <div class="col-span-6 sm:col-span-1">
-            <label class="text-xs uppercase tracking-wide text-slate-400">Durezza min (ShA)</label>
-            <input id="fMin" type="number" inputmode="numeric" class="mt-1 w-full rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" value="0" />
-          </div>
-          <div class="col-span-6 sm:col-span-1">
-            <label class="text-xs uppercase tracking-wide text-slate-400">Durezza max (ShA)</label>
-            <input id="fMax" type="number" inputmode="numeric" class="mt-1 w-full rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" value="100" />
-          </div>
-          <div class="col-span-12 sm:col-span-1 flex gap-2">
-            <button id="btnApply" class="mt-6 w-full rounded-xl bg-emerald-600 text-slate-900 font-semibold px-3 py-2 hover:bg-emerald-500">Applica</button>
-          </div>
-          <div class="col-span-12 sm:col-span-1 flex gap-2">
-            <button id="btnReset" class="mt-6 w-full rounded-xl bg-slate-800 px-3 py-2 hover:bg-slate-700">Reset</button>
-          </div>
-          <div class="col-span-12 sm:col-span-2 flex gap-2">
-            <button id="btnExport" class="mt-6 w-full rounded-xl border border-slate-700 px-3 py-2 hover:bg-slate-800">Esporta CSV</button>
-          </div>
+  <main class="max-w-7xl mx-auto p-4">
+    <section id="databaseView">
+      <h2 class="text-xl font-semibold">Database Materiali — scegli tra i materiali a disposizione</h2>
+      <div class="mt-4 flex flex-wrap gap-4 items-end">
+        <div>
+          <label class="text-sm">Tipologia polimero</label>
+          <select id="fTipo" class="block mt-1 bg-slate-900 border border-slate-700 rounded px-2 py-1">
+            <option value="">Tutte</option>
+          </select>
         </div>
-        <div class="mt-3 text-sm text-slate-400">
-          <span id="count">0 risultati</span>
-          <span class="opacity-60"> • Sorgente: <code id="srcPath">./data/materiali_database.csv</code></span>
-          <span id="versionTag" class="ml-2 chip text-emerald-300 border-emerald-500/30 bg-emerald-500/10 text-xs">v6</span>
+        <div>
+          <label class="text-sm">Applicazione</label>
+          <select id="fApp" class="block mt-1 bg-slate-900 border border-slate-700 rounded px-2 py-1">
+            <option value="">Tutte</option>
+          </select>
         </div>
+        <div>
+          <label class="text-sm">Durezza min</label>
+          <input id="fMin" type="number" value="0" class="block mt-1 w-20 bg-slate-900 border border-slate-700 rounded px-2 py-1" />
+        </div>
+        <div>
+          <label class="text-sm">Durezza max</label>
+          <input id="fMax" type="number" value="100" class="block mt-1 w-20 bg-slate-900 border border-slate-700 rounded px-2 py-1" />
+        </div>
+        <button id="btnApply" class="px-3 py-1 rounded bg-emerald-600 text-slate-900 font-semibold">Applica</button>
+        <button id="btnReset" class="px-3 py-1 rounded bg-slate-800">Reset</button>
+        <button id="btnExport" class="px-3 py-1 rounded border border-slate-700">Esporta CSV</button>
       </div>
-
-      <!-- Table -->
-      <div class="mt-6 overflow-auto rounded-2xl border border-slate-800 table-sticky">
-        <table id="tbl" class="min-w-full text-left text-sm">
+      <div class="mt-2 text-sm text-slate-400">
+        <span id="count">0 risultati</span>
+        <span> • Sorgente: <code id="srcPath">./data/materiali_database.csv</code></span>
+      </div>
+      <div class="mt-4 overflow-auto border border-slate-800 rounded">
+        <table class="min-w-full text-sm" id="tbl">
           <thead>
-            <tr class="bg-slate-900/80">
-              <th class="px-4 py-3 font-semibold">Sigla</th>
-              <th class="px-4 py-3 font-semibold">Processo</th>
-              <th class="px-4 py-3 font-semibold">regulation</th>
-              <th class="px-4 py-3 font-semibold">Peso Specifico<br><span class="text-xs text-slate-400">(g/cm3) ISO 1183-1</span></th>
-              <th class="px-4 py-3 font-semibold">Carico di Rottura<br><span class="text-xs text-slate-400">(N/mm2) ISO 527</span></th>
-              <th class="px-4 py-3 font-semibold">Allungamento a Rottura<br><span class="text-xs text-slate-400">(N/mm2) ISO 527</span></th>
-              <th class="px-4 py-3 font-semibold">Compression Set<br><span class="text-xs text-slate-400">(ASTM D 395) (22°C/72h)</span></th>
-              <th class="px-4 py-3 font-semibold">special features</th>
+            <tr>
+              <th class="px-3 py-2">Sigla</th>
+              <th class="px-3 py-2">Processo</th>
+              <th class="px-3 py-2">regulation</th>
+              <th class="px-3 py-2">Peso Specifico (g/cm3) ISO 1183-1</th>
+              <th class="px-3 py-2">Carico di Rottura (N/mm2) ISO 527</th>
+              <th class="px-3 py-2">Allungamento a Rottura (N/mm2) ISO 527</th>
+              <th class="px-3 py-2">Compression Set (ASTM D 395) (22°C/72h)</th>
+              <th class="px-3 py-2">special features</th>
             </tr>
           </thead>
-          <tbody id="tbody" class="divide-y divide-slate-800/70"></tbody>
+          <tbody id="tbody"></tbody>
         </table>
-      </div>
-    </section>
-
-    <!-- CONTATTI PLACEHOLDER (preserva flusso esistente) -->
-    <section id="contattiView" class="hidden pt-10">
-      <div class="rounded-2xl border border-slate-800 p-6">
-        <h3 class="text-xl font-semibold">Contatti</h3>
-        <p class="mt-2 text-slate-300">Questa pagina usa ancora Supabase + Netlify Forms (form name: <code>contatti</code>). Rimane invariata. Questo file si concentra sul Database Materiali.</p>
-        <a href="/contatti-admin.html" class="inline-block mt-3 underline">Admin contatti</a>
       </div>
     </section>
   </main>
 
   <script>
-  // ======= CONFIG =======
-  const CSV_PATH_PRIMARY = './data/materiali_database.csv';
-  const CSV_PATH_FALLBACK = '/data/materiali_database.csv'; // per Netlify
+    const CSV_PATH = './data/materiali_database.csv';
+    let rawData = [];
 
-  const state = {
-    raw: [],       // array di oggetti (righe CSV)
-    filtered: [],  // array filtrato per UI
-    meta: { delimiter: undefined },
-    columns: [],
-  };
-
-  const el = (id)=>document.getElementById(id);
-
-  // ======= FETCH + PARSE (evita richieste duplicate) =======
-  let loadedOnce = false;
-  async function loadCsvOnce(){
-    if(loadedOnce) return state.raw;
-    const srcs = [CSV_PATH_PRIMARY, CSV_PATH_FALLBACK];
-    let lastErr = null;
-    for(const src of srcs){
-      try{
-        el('srcPath').textContent = src;
-        const resp = await fetch(src + `?v=${Date.now()}` , { cache: 'no-store' });
-        if(!resp.ok) throw new Error('HTTP ' + resp.status);
-        const text = await resp.text();
-        const parsed = Papa.parse(text, { header:true, dynamicTyping:false, skipEmptyLines:true });
-        if(parsed.errors && parsed.errors.length){
-          console.warn('Papa errors', parsed.errors);
+    function normalizeRow(row){
+      const out = {};
+      for(const k in row){
+        const key = k.trim();
+        let val = row[k];
+        if(typeof val === 'string'){
+          val = val.trim();
+          if(/^\d+(,\d+)?$/.test(val)){
+            val = Number(val.replace(',', '.'));
+          }
         }
-        // auto-rileva delimitatore se possibile via meta (Papa lo espone quando non header?), 
-        // qui ci accontentiamo del risultato già normalizzato da Papa.
-        state.raw = parsed.data.map(normalizeRecord);
-        state.columns = Object.keys(parsed.data[0] || {});
-        loadedOnce = true;
-        console.info('[db-patch v6] CSV caricato. Righe:', state.raw.length);
-        return state.raw;
-      }catch(err){
-        lastErr = err;
-        console.warn('Tentativo fallito su', src, err);
+        out[key] = val;
       }
+      return out;
     }
-    console.error('Impossibile caricare il CSV', lastErr);
-    alert('Errore nel caricare il database materiali. Controlla il percorso /data/materiali_database.csv');
-    return [];
-  }
 
-  // Normalizza chiavi/valori più comuni
-  function normalizeRecord(row){
-    const out = {};
-    for(const k in row){
-      const key = k.trim();
-      let val = row[k];
-      if(typeof val === 'string'){
-        val = val.trim();
-        // converte virgola decimale in punto per i numeri
-        const v2 = val.replace(/,(?=\d{1,2}$)/, '.');
-        if(/^[-+]?\d+(?:[\.,]\d+)?$/.test(val)){
-          out[key] = Number(v2);
-          continue;
-        }
-      }
-      out[key] = val;
+    async function loadCsv(){
+      document.getElementById('srcPath').textContent = CSV_PATH;
+      const resp = await fetch(CSV_PATH);
+      const text = await resp.text();
+      const parsed = Papa.parse(text, { header:true, skipEmptyLines:true });
+      rawData = parsed.data.map(normalizeRow);
+      drawTable(rawData);
+      buildFilters();
     }
-    return out;
-  }
 
-  // ======= UI BUILD =======
-  function fillSelect(id, values){
-    const sel = el(id);
-    const seen = new Set();
-    values.filter(v=>v!=='' && v!=null).forEach(v=>{
-      const s = String(v).trim();
-      if(!s || seen.has(s)) return;
-      seen.add(s);
-      const opt = document.createElement('option');
-      opt.value = s; opt.textContent = s;
-      sel.appendChild(opt);
-    });
-  }
-
-  function buildFilters(){
-    const r = state.raw;
-    fillSelect('fTipo', Array.from(new Set(r.map(x=>x['Tipologia']||x['Tipologia polimero']||x['tipologia']||x['polimero']))).sort());
-    fillSelect('fApp',  Array.from(new Set(r.map(x=>x['Applicazione']||x['applicazione']))).sort());
-    fillSelect('fProc', Array.from(new Set(r.map(x=>x['Processo']||x['processo']))).sort());
-  }
-
-  // Filtra e disegna
-  function applyFilters(){
-    const fTipo = el('fTipo').value;
-    const fApp  = el('fApp').value;
-    const fProc = el('fProc').value;
-    const min = Number(el('fMin').value || 0);
-    const max = Number(el('fMax').value || 100);
-
-    state.filtered = state.raw.filter(row => {
-      const duro = Number(row['Durezza'] || row['ShA'] || row['Durezza (ShA)'] || row['Shore A'] || 0);
-      const okDuro = isFinite(duro) ? (duro>=min && duro<=max) : true;
-      const okTipo = !fTipo || [row['Tipologia'], row['Tipologia polimero'], row['tipologia'], row['polimero']].some(v=>String(v||'')===fTipo);
-      const okApp  = !fApp  || String(row['Applicazione']||row['applicazione']||'')===fApp;
-      const okProc = !fProc || String(row['Processo']||row['processo']||'')===fProc;
-      return okDuro && okTipo && okApp && okProc;
-    });
-
-    drawTable();
-  }
-
-  function drawTable(){
-    const tbody = el('tbody');
-    tbody.innerHTML='';
-    const rows = state.filtered.length? state.filtered : state.raw; // all on first load
-    el('count').textContent = `${rows.length} risultati`;
-
-    for(const row of rows){
-      const tr = document.createElement('tr');
-      tr.className = 'hover:bg-slate-900/40';
-      tr.innerHTML = `
-        <td class="px-4 py-3 whitespace-nowrap">${escapeHtml(row['Sigla']||'')}</td>
-        <td class="px-4 py-3">${escapeHtml(row['Processo']||row['processo']||'')}</td>
-        <td class="px-4 py-3">${escapeHtml(row['regulation']||'')}</td>
-        <td class="px-4 py-3">${fmt(row['Peso Specifico (g/cm3) ISO 1183-1'])}</td>
-        <td class="px-4 py-3">${fmt(row['Carico di Rottura (N/mm2) ISO 527'])}</td>
-        <td class="px-4 py-3">${fmt(row['Allungamento a Rottura (N/mm2) ISO 527'])}</td>
-        <td class="px-4 py-3">${escapeHtml(row['Compression Set (ASTM D 395) (22°C/72h)']||'')}</td>
-        <td class="px-4 py-3">${escapeHtml(row['special features']||'')}</td>
-      `;
-      tbody.appendChild(tr);
+    function buildFilters(){
+      const tipi = [...new Set(rawData.map(r => r['Tipologia polimero']).filter(Boolean))];
+      const apps = [...new Set(rawData.map(r => r['Applicazione']).filter(Boolean))];
+      fillSelect('fTipo', tipi);
+      fillSelect('fApp', apps);
     }
-  }
 
-  function fmt(v){
-    if(v==null) return '';
-    if(typeof v==='number') return String(v);
-    return escapeHtml(String(v));
-  }
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-  }
+    function fillSelect(id, values){
+      const sel = document.getElementById(id);
+      values.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        sel.appendChild(opt);
+      });
+    }
 
-  // ======= EXPORT =======
-  function exportCsv(){
-    const data = (state.filtered.length? state.filtered : state.raw);
-    const csv = Papa.unparse(data);
-    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `materiali_filtrati_${new Date().toISOString().slice(0,10)}.csv`;
-    document.body.appendChild(a); a.click(); a.remove();
-  }
+    function applyFilters(){
+      const tipo = document.getElementById('fTipo').value;
+      const app = document.getElementById('fApp').value;
+      const min = Number(document.getElementById('fMin').value);
+      const max = Number(document.getElementById('fMax').value);
+      const filtered = rawData.filter(r => {
+        const duro = Number(r['Durezza']||0);
+        return (!tipo || r['Tipologia polimero']===tipo)
+          && (!app || r['Applicazione']===app)
+          && (duro>=min && duro<=max);
+      });
+      drawTable(filtered);
+    }
 
-  // ======= EVENTS =======
-  document.addEventListener('DOMContentLoaded', async () => {
-    await loadCsvOnce();
-    buildFilters();
-    applyFilters();
+    function drawTable(rows){
+      const tbody = document.getElementById('tbody');
+      tbody.innerHTML = '';
+      document.getElementById('count').textContent = rows.length + ' risultati';
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="px-3 py-2">${r['Sigla']||''}</td>
+          <td class="px-3 py-2">${r['Processo']||''}</td>
+          <td class="px-3 py-2">${r['regulation']||''}</td>
+          <td class="px-3 py-2">${r['Peso Specifico (g/cm3) ISO 1183-1']||''}</td>
+          <td class="px-3 py-2">${r['Carico di Rottura (N/mm2) ISO 527']||''}</td>
+          <td class="px-3 py-2">${r['Allungamento a Rottura (N/mm2) ISO 527']||''}</td>
+          <td class="px-3 py-2">${r['Compression Set (ASTM D 395) (22°C/72h)']||''}</td>
+          <td class="px-3 py-2">${r['special features']||''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
 
-    el('btnApply').addEventListener('click', applyFilters);
-    el('btnReset').addEventListener('click', () => {
-      ['fTipo','fApp','fProc'].forEach(id=>{ el(id).value=''; });
-      el('fMin').value = 0; el('fMax').value = 100;
-      state.filtered = [];
-      drawTable();
-    });
-    el('btnExport').addEventListener('click', exportCsv);
+    function exportCsv(){
+      const csv = Papa.unparse(rawData);
+      const blob = new Blob([csv], { type:'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'materiali_export.csv';
+      a.click();
+    }
 
-    // Tabs (placeholder)
-    el('tabContatti').addEventListener('click',()=>{
-      el('dbView').classList.add('hidden');
-      el('contattiView').classList.remove('hidden');
-    });
-    el('tabDatabase').addEventListener('click',()=>{
-      el('contattiView').classList.add('hidden');
-      el('dbView').classList.remove('hidden');
-    });
-  });
+    document.getElementById('btnApply').addEventListener('click', applyFilters);
+    document.getElementById('btnReset').addEventListener('click', () => drawTable(rawData));
+    document.getElementById('btnExport').addEventListener('click', exportCsv);
+
+    loadCsv();
   </script>
 </body>
 </html>
