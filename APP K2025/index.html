@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PVC-FREE K2025 contatti e database</title>
+  <meta name="color-scheme" content="dark light">
+  <style>
+    :root{--bg:#0c0f16;--panel:#121724;--muted:#9aa3b2;--text:#e8ecf4;--brand:#6aa5ff;--ok:#17c964;--warn:#ffaa00}
+    *{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    a{color:var(--brand);text-decoration:none}
+    .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+    .tabs{display:flex;gap:8px;margin-bottom:16px}
+    .tab-btn{padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:#0f1322;color:var(--text);cursor:pointer}
+    .tab-btn.active{background:var(--brand);color:#0b0d12;border-color:var(--brand)}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.00));border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+    .field{display:flex;flex-direction:column;gap:6px}
+    .field input,.field select,.field textarea{padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#121724;color:var(--text)}
+    .btn{padding:10px 14px;border-radius:12px;border:0;background:var(--brand);color:#0b0d12;font-weight:700;cursor:pointer}
+    .btn.secondary{background:#1b2135;color:var(--text);border:1px solid rgba(255,255,255,.12)}
+    .btn.warn{background:var(--warn);color:#0b0d12}
+    .muted{color:var(--muted)}
+    .section{display:none}
+    .section.active{display:block}
+    .table-wrap{overflow:auto;border-radius:12px;border:1px solid rgba(255,255,255,.08);margin-top:12px}
+    table{width:100%;border-collapse:separate;border-spacing:0}
+    thead th{position:sticky;top:0;background:#11152a;text-align:left;padding:10px;border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap}
+    tbody td{padding:10px;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px;vertical-align:top}
+    tbody tr:hover{background:rgba(255,255,255,.03)}
+    .pill{background:#1a2138;color:var(--text);border:1px solid rgba(255,255,255,.12);padding:2px 8px;border-radius:999px;font-size:12px}
+    .tools{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>PVCFree</h1>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="contatti">Contatti</button>
+      <button class="tab-btn" data-tab="db">Database Materiali</button>
+      <a class="tab-btn" href="contatti-admin.html" target="_blank" rel="noopener">Admin (📎 & Excel)</a>
+    </div>
+
+    <!-- ================== CONTATTI ================== -->
+    <section id="contatti" class="section active">
+      <div class="card">
+        <h2>Nuovo contatto</h2>
+        <p class="muted">Compila e premi <strong>Aggiungi contatto</strong>. Verrà salvato nella tabella qui sotto e inviato anche a Netlify Forms (per gestire gli allegati e l'export Excel).</p>
+        <div class="grid" style="margin-top:8px">
+          <div class="field" style="grid-column: span 4;">
+            <label for="azienda">Azienda</label>
+            <input id="azienda" placeholder="Ragione sociale">
+          </div>
+          <div class="field" style="grid-column: span 4;">
+            <label for="email">Email</label>
+            <input id="email" type="email" placeholder="nome@azienda.com">
+          </div>
+          <div class="field" style="grid-column: span 4;">
+            <label for="categoria">Categoria</label>
+            <select id="categoria">
+              <option>Cliente</option>
+              <option>Fornitore</option>
+              <option>Partner</option>
+              <option>Altro</option>
+            </select>
+          </div>
+
+          <div class="field" style="grid-column: span 4;">
+            <label for="regione">Regione / Paese</label>
+            <input id="regione" placeholder="es. Lombardia / IT">
+          </div>
+          <div class="field" style="grid-column: span 4;">
+            <label for="polimero">Polimero</label>
+            <input id="polimero" placeholder="es. BIO / TPE-S">
+          </div>
+          <div class="field" style="grid-column: span 4;">
+            <label for="processo">Processo</label>
+            <input id="processo" placeholder="es. Stampaggio, Estrusione…">
+          </div>
+
+          <div class="field" style="grid-column: span 12;">
+            <label for="note">Note</label>
+            <textarea id="note" rows="4" placeholder="Note, richieste specifiche, applicazioni…"></textarea>
+          </div>
+
+          <div class="field" style="grid-column: span 6;">
+            <label for="immagini">Immagini (JPG/PNG/WEBP/GIF)</label>
+            <input id="immagini" type="file" accept="image/*">
+          </div>
+        </div>
+
+        <div class="tools">
+          <button id="btn-add-contact" class="btn">Aggiungi contatto</button>
+          <button id="btn-reset" class="btn secondary">Reset modulo</button>
+        </div>
+
+        <div class="table-wrap">
+          <table id="tbl-contatti">
+            <thead>
+              <tr>
+                <th>Azienda</th><th>Email</th><th>Categoria</th><th>Regione</th>
+                <th>Polimero</th><th>Processo</th><th>Note</th><th>Immagine</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================== DATABASE MATERIALI ================== -->
+    <section id="db" class="section">
+      <div class="card">
+        <h2>Database Materiali</h2> <span class="muted" style="margin-left:8px">— scegli tra i materiali a disposizione</span>
+        <p class="muted">Filtra per <strong>Tipologia polimero</strong>, <strong>Applicazione</strong> e <strong>Durezza (ShA)</strong>. La tabella mostra le proprietà principali.</p>
+
+        <div class="grid" style="margin-top:8px">
+          <div class="field" style="grid-column: span 4;">
+            <label>Tipologia polimero</label>
+            <select id="f-tipologia"><option value="">Tutte</option></select>
+          </div>
+          <div class="field" style="grid-column: span 4;">
+            <label>Applicazione</label>
+            <select id="f-app"><option value="">Tutte</option></select>
+          </div>
+          <div class="field" style="grid-column: span 4;">
+            <label>Durezza (ShA) — intervallo</label>
+            <div class="grid" style="grid-template-columns:1fr 1fr; gap:8px">
+              <input id="f-min" placeholder="min">
+              <input id="f-max" placeholder="max">
+            </div>
+          </div>
+        </div>
+
+        <div class="tools">
+          <button id="btn-apply" class="btn">Applica</button>
+          <button id="btn-reset-db" class="btn secondary">Reset</button>
+          <button id="btn-export-db" class="btn secondary">Esporta CSV</button>
+          <span id="db-meta" class="muted" style="align-self:center"></span>
+        </div>
+
+        <div class="table-wrap">
+          <table id="tbl-db">
+            <thead>
+              <tr>
+                <th>Sigla</th><th>Processo</th><th>regulation</th>
+                <th>Peso Specifico (g/cm3) ISO 1183-1</th>
+                <th>Carico di Rottura (N/mm2) ISO 527</th>
+                <th>Allungamento a Rottura (N/mm2) ISO 527</th>
+                <th>Compression Set (ASTM D 395) (22°C/72h)</th>
+                <th>special features</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ====== Form "fantasma" per Netlify (rilevamento + upload) ====== -->
+  <form id="nl-contatti" name="contatti"
+        method="POST" data-netlify="true"
+        netlify-honeypot="bot-field"
+        enctype="multipart/form-data" hidden>
+    <input type="hidden" name="form-name" value="contatti">
+    <!-- campi verranno compilati via JS -->
+    <input type="text"   name="nome"      hidden>
+    <input type="email"  name="email"     hidden>
+    <textarea name="messaggio"            hidden></textarea>
+    <!-- l'allegato lo inviamo con fetch/FormData -->
+  </form>
+
+  <!-- ====== Gate (markup invariato) ====== -->
+  <div id="gate" style="position:fixed;inset:0;display:grid;place-items:center;background:#0f172acc;backdrop-filter:blur(4px);z-index:9999">
+    <div style="background:#0b1220;border:1px solid #1f2937;border-radius:16px;padding:16px;box-shadow:0 20px 60px #0007;min-width:300px;max-width:90vw">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px">
+        <div style="display:flex;gap:10px;align-items:center">
+          <img src="./assets/logo.png" alt="TPV" style="height:32px">
+          <strong>PVC-FREE K2025 contatti e database</strong>
+        </div>
+        <img src="./assets/sft-polymer.png" alt="SFT Polymer" style="height:26px">
+      </div>
+      <div style="color:#94a3b8;margin-bottom:6px">Inserisci la password generale per entrare.</div>
+      <input id="sharedPw" type="password" placeholder="Password" style="width:100%;background:#0a0f1d;color:#e5e7eb;border:1px solid #1e293b;border-radius:10px;padding:10px 12px;outline:none;">
+      <div style="display:flex;gap:10px;margin-top:10px">
+        <button id="gateBtn" class="btn btn-primary" style="flex:1">Accedi</button>
+        <button id="gateClear" class="btn btn-outline">Cancella</button>
+      </div>
+      <div id="gateMsg" style="color:#f87171;margin-top:6px;font-size:12px"></div>
+    </div>
+  </div>
+
+  <!-- ====== Script esterni (niente inline) ====== -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="./pvcfree_script_clean.js"></script>
+  <script src="./gate_clean.js"></script>
+
+</body>
+</html>
