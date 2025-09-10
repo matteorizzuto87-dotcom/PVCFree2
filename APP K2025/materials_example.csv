@@ -1,0 +1,4 @@
+categoria,nome,descrizione,properties
+TPE,TPE-Soft 60A,Grade morbido per guarnizioni,"{""durezza"":""60A"",""colore"":""naturale""}"
+BIO,BIO-Comp A,Compound bio-based per estrusione,"{""bio_content"":""60%"",""processo"":""estrusione""}"
+TPU,TPU-Flex 85A,Alta resistenza all'abrasione,"{""durezza"":""85A"",""trasparente"":true}"
