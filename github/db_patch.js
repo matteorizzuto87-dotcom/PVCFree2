@@ -1,10 +1,24 @@
-// === PVC-FREE K2025 — Database runtime patch (v2) ===
+
+// === PVC-FREE K2025 — Database runtime patch (v3, resilient) ===
 (function(){
-  // Neutralize old loadMaterials to avoid null.value errors
-  window.loadMaterials = function(){ /* patched no-op */ };
+  // Optional: clear service worker when ?clear-sw=1
+  (async function(){
+    try{
+      if (location.search.includes("clear-sw=1") && 'serviceWorker' in navigator){
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const r of regs) await r.unregister();
+        if (window.caches && caches.keys) caches.keys().then(keys=>keys.forEach(k=>caches.delete(k)));
+        console.info("[K2025] Service worker cleared.");
+      }
+    }catch(e){ console.debug(e); }
+  })();
+
+  // Neutralize old loadMaterials to avoid null.value errors on tab switch
+  try { window.loadMaterials = function(){}; } catch(e){}
 
   const CSV_PATH = "./data/materiali_database.csv";
 
+  // Utils
   function ensurePapa(cb){
     if (window.Papa && typeof window.Papa.parse === "function") return cb();
     const s = document.createElement("script");
@@ -12,16 +26,8 @@
     s.onload = cb;
     document.head.appendChild(s);
   }
-
-  const norm = s => String(s||"").toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-    .replace(/\s+/g," ").trim();
-  const toNumber = x => {
-    if (x === null || x === undefined) return NaN;
-    const s = String(x).toLowerCase().replace(",", ".");
-    const m = s.match(/(\d+(\.\d+)?)/);
-    return m ? parseFloat(m[1]) : NaN;
-  };
+  const norm = s => String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
+  const toNumber = x => { if (x==null) return NaN; const m=String(x).toLowerCase().replace(",",".").match(/(\d+(\.\d+)?)/); return m?parseFloat(m[1]):NaN; };
 
   const COLS = {
     polimero:    ["polimero","polymer","categoria materiale","categoria","famiglia","tipo"],
@@ -63,8 +69,25 @@
     };
   }
 
+  // Find DB section
+  function findSection(){
+    let el = document.querySelector("#view-materials, #materials, [data-view='materials'], [data-tab='database'], section#database, section[id*='material'], main #database");
+    if (el) return el;
+    const headings = Array.from(document.querySelectorAll("h1,h2,h3,h4"));
+    const found = headings.find(h => /database\s+material/i.test(h.textContent||""));
+    if (found){
+      const candidates = [".card",".section","section","main",".container"];
+      for (const sel of candidates){ const c = found.closest(sel); if (c) return c; }
+      return found.parentElement || found;
+    }
+    const tables = Array.from(document.querySelectorAll("table"));
+    if (tables.length){ const t = tables[0]; return t.closest("section") || t.closest(".card") || t.parentElement; }
+    return null;
+  }
+
   function buildUI(section){
-    if (section.querySelector("#materials-body")) return; // already built
+    if (!section || section.__dbUIBuilt) return;
+    section.__dbUIBuilt = true;
     section.innerHTML = `
       <div style="display:flex;justify-content:flex-end;margin:6px 0">
         <img src="./assets/sft-polymer.png" alt="SFT Polymer" style="height:26px"/>
@@ -130,11 +153,7 @@
     `;
   }
 
-  function setup(){
-    const section = document.querySelector("#view-materials");
-    if (!section) return;
-    buildUI(section);
-
+  function initLogic(){
     let allRows = [];
     let filteredRows = [];
 
@@ -241,11 +260,29 @@
     });
   }
 
-  function start(){
-    if (window.__dbPatchLoaded) return;
-    window.__dbPatchLoaded = true;
-    ensurePapa(setup);
+  function startIfReady(){
+    const section = findSection();
+    if (!section) return false;
+    buildUI(section);
+    initLogic();
+    return true;
   }
+
+  function start(){
+    ensurePapa(function(){
+      if (startIfReady()) return;
+      const obs = new MutationObserver(() => { if (startIfReady()) obs.disconnect(); });
+      obs.observe(document.body, {childList:true, subtree:true});
+    });
+  }
+
+  document.addEventListener("click", (e)=>{
+    const t = e.target;
+    if (!t) return;
+    const txt = (t.textContent||"") + " " + (t.getAttribute&&t.getAttribute("aria-label")||"");
+    if (/database/i.test(txt)) setTimeout(start, 0);
+  });
+  window.addEventListener("hashchange", start);
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
   else start();
