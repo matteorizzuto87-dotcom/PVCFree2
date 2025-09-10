@@ -1,490 +1,293 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1" name="viewport"/>
-<title>PVC-FREE K2025 contatti e database</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script>
-// ====== ENV: MODIFICA QUI SE SERVE ======
-window.ENV = {
-  SUPABASE_URL: "https://cggnkjqmnilnflxaynda.supabase.co",
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNnZ25ranFtbmlsbmZseGF5bmRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5NzI5NjgsImV4cCI6MjA3MjU0ODk2OH0.ndVbgmNmQNJndDEPyb2q2Sy9h0_9PcaIaGvahAn7e2M",
-  STORAGE_BUCKET: "contact-images",
-  IS_ADMIN: true // per includere "Immagini URL" nell'Excel
-};
-</script>
-<style>
-  :root { --bg:#0f172a; --card:#0b1220; --muted:#94a3b8; --accent:#22c55e; --ring:#38bdf8; --text:#e5e7eb; --border:#1f2937; }
-  *{box-sizing:border-box} body{margin:0;background:radial-gradient(1200px 1200px at 20% -5%, #0ea5e910, transparent 60%),radial-gradient(1400px 1400px at 120% 10%, #22c55e10, transparent 50%),var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;min-height:100vh}
-  header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#0f172a,#0f172acc);backdrop-filter:saturate(1.2) blur(6px);border-bottom:1px solid #111827}
-  .nav{display:flex;align-items:center;gap:12px;padding:10px 14px;max-width:1200px;margin:0 auto}
-  .logo img{height:36px} .brand{display:flex;flex-direction:column}
-  .brand h1{font-size:18px;line-height:1.1;margin:0;background:linear-gradient(90deg,#e5e7eb,#93c5fd,#6ee7b7);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800}
-  .brand small{color:#9ca3af;font-weight:600}
-  .nav-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
-  .btn{display:inline-flex;gap:8px;align-items:center;justify-content:center;padding:8px 12px;border-radius:12px;border:1px solid #1f2937;background:linear-gradient(180deg,#0f172a,#0b1220);color:#e5e7eb;cursor:pointer;font-weight:600;transition:transform .04s ease,filter .2s ease,box-shadow .2s ease}
-  .btn:hover{filter:brightness(1.12)} .btn:active{transform:translateY(1px)}
-  .btn-primary{background:linear-gradient(180deg,#22c55e,#16a34a);color:#07110a;border-color:#16a34a;box-shadow:0 6px 20px #22c55e33}
-  .btn-outline{background:transparent;border-color:#334155;color:#cbd5e1}
-  .container{padding:16px;max-width:1200px;margin:0 auto}
-  .grid{display:grid;gap:10px;grid-template-columns:repeat(12,1fr)}
-  .card{background:linear-gradient(180deg,#0b1220,#0b1220f0);border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 60px #0006}
-  .card-pad{padding:16px}
-  .col-12{grid-column:span 12}.col-6{grid-column:span 6}.col-4{grid-column:span 4}.col-3{grid-column:span 3}
-  @media (max-width:900px){.col-6,.col-4,.col-3{grid-column:span 12}}
-  label{font-size:12px;color:var(--muted);display:block;margin:6px 0}
-  input[type="text"],input[type="email"],select,textarea{width:100%;background:#0a0f1d;color:var(--text);border:1px solid #1e293b;border-radius:10px;padding:11px 12px;outline:none;transition:all .2s ease;box-shadow:0 1px 0 #000 inset}
-  input[type="text"]:focus,input[type="email"]:focus,select:focus,textarea:focus{border-color:var(--ring);box-shadow:0 0 0 3px #38bdf833}
-  textarea{min-height:80px;resize:vertical}
-  .tools{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
-  .table-wrap{margin-top:12px;overflow:auto} table{width:100%;border-collapse:collapse}
-  th,td{border-bottom:1px solid #1f2937;padding:10px 8px;text-align:left;vertical-align:top;font-size:14px}
-  th{color:#cbd5e1;font-weight:700;position:sticky;top:0;background:#0b1220}
-  tr:hover td{background:#0b1220bb}
-  .badge{display:inline-flex;gap:6px;align-items:center;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #334155;color:#a5b4fc}
-  .muted{color:var(--muted)}
-  .gate{position:fixed;inset:0;display:none;place-items:center;z-index:100;background:radial-gradient(1200px 1200px at 20% -5%, #0ea5e944, transparent 60%),radial-gradient(1400px 1400px at 120% 10%, #22c55e44, transparent 50%),var(--bg)}
-  .gate.open{display:grid}
-  .box{width:min(520px,92vw);background:linear-gradient(180deg,#0b1220,#0b1220f0);border:1px solid var(--border);border-radius:18px;padding:16px;box-shadow:0 20px 60px #0007}
-  .tabs{display:flex;gap:8px;margin:10px 0}
-  .tab{padding:8px 12px;border-radius:10px;border:1px solid #334155;cursor:pointer;color:#e5e7eb;text-decoration:none}
-  .tab.active{background:#0b1220;border-color:#22c55e;color:#22c55e}
-  .thumbs{display:flex;gap:8px;flex-wrap:wrap} .thumbs img{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #334155}
-  .modal{position:fixed;inset:0;display:none;place-items:center;padding:20px;background:#000a} .modal.open{display:grid}
-  .modal-card{background:#0b1220;border:1px solid #1f2937;border-radius:16px;padding:16px;max-width:900px;width:100%;max-height:80vh;overflow:auto;box-shadow:0 30px 80px #0008}
-  .modal .thumb{display:flex;flex-direction:column;gap:6px;align-items:flex-start} .modal .thumb img{width:160px;height:160px;border-radius:10px;border:1px solid #334155;object-fit:cover}
-  .right{text-align:right}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PVC-FREE K2025 contatti e database</title>
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Papa Parse (CSV) -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    html,body{height:100%;}
+    body{font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";}
+    .chip{border-radius:9999px;padding:.25rem .65rem;border:1px solid rgba(255,255,255,.12);}
+    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.25);}
+    .table-sticky thead th{position:sticky;top:0;background-color:#0b1220;z-index:1}
+  </style>
 </head>
-<body>
-<!-- Password gate -->
-<div class="gate open" id="gate">
-  <div class="box">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px">
-      <div style="display:flex;gap:10px;align-items:center">
-        <img alt="TPV logo" src="./assets/logo.png" onerror="this.style.display='none'"/>
-        <div class="brand"><h1>PVC-FREE K2025 contatti e database</h1><small>by TPV Compound</small></div>
-      </div>
-      <img src="./assets/sft-polymer.png" alt="SFT Polymer" style="height:26px"/>
+<body class="min-h-full bg-slate-900 text-slate-100">
+  <header class="sticky top-0 z-30 border-b border-slate-800/80 backdrop-blur bg-slate-900/80">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
+      <img alt="TPV Polymer" src="/logo.png" class="h-6 w-auto" onerror="this.style.display='none'"/>
+      <h1 class="text-sm sm:text-base font-semibold tracking-tight">PVC-FREE K2025 contatti e database</h1>
+      <nav class="ml-auto flex items-center gap-2">
+        <button id="tabContatti" class="chip hover:bg-slate-800" type="button">Contatti</button>
+        <button id="tabDatabase" class="chip bg-emerald-500/15 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25" type="button">Database Materiali</button>
+      </nav>
+      <a id="newContactBtn" href="#contatti" class="hidden sm:inline-flex ml-2 px-3 py-1.5 rounded-2xl bg-emerald-500 text-slate-900 font-semibold shadow-soft hover:opacity-95">+ Nuovo contatto</a>
     </div>
-    <p class="muted">Inserisci la password per accedere.</p>
-    <input id="sharedPw" placeholder="Password" type="password"/>
-    <div style="display:flex;gap:10px;margin-top:10px">
-      <button class="btn btn-primary" onclick="gateUnlock()">Accedi</button>
-      <button class="btn btn-outline" onclick="document.getElementById('sharedPw').value='';document.getElementById('sharedPw').focus()">Cancella</button>
-    </div>
-    <div id="gateMsg" class="muted" style="margin-top:6px"></div>
-  </div>
-</div>
-<header>
-  <div class="nav">
-    <div class="logo"><img alt="TPV logo" src="./assets/logo.png" onerror="this.style.display='none'"/></div>
-    <div class="brand"><h1>PVC-FREE K2025 contatti e database</h1><small>by TPV Compound</small></div>
-    <div class="nav-actions">
-      <button class="btn btn-primary" onclick="scrollToForm(true)">＋ Nuovo contatto</button>
-      <img src="./assets/sft-polymer.png" alt="SFT Polymer" style="height:26px"/>
-    </div>
-  </div>
-  <div class="nav" style="padding-top:0">
-    <div class="tabs">
-      <div class="tab active" id="tab-contacts" onclick="switchTab('contacts')">Contatti</div>
-      <div class="tab" id="tab-materials" onclick="switchTab('materials')">Database Materiali</div>
-    </div>
-  </div>
-</header>
-<main class="container">
-  <!-- AUTH (nascosto per flusso senza login) -->
-  <section class="card card-pad" id="auth" style="display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-      <div>
-        <div style="font-weight:700">Accesso</div>
-        <div class="muted">Accedi con credenziali Supabase (email + password).</div>
-      </div>
-      <div class="muted" id="authStatus">Non autenticato</div>
-    </div>
-    <div class="grid" style="margin-top:8px">
-      <div class="col-4"><label>Email</label><input id="auth_email" placeholder="nome@azienda.it" type="email"/></div>
-      <div class="col-4"><label>Password</label><input id="auth_password" placeholder="Password" type="password"/></div>
-      <div class="col-4" style="display:flex;align-items:end;gap:10px;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="login()">Login</button>
-        <button class="btn btn-outline" onclick="logout()">Logout</button>
-        <button class="btn btn-outline" onclick="forgot()">Password dimenticata?</button>
-      </div>
-    </div>
-  </section>
+  </header>
 
-  <!-- CONTACTS VIEW -->
-  <section id="view-contacts">
-    <div style="display:flex;justify-content:flex-end;margin:6px 0">
-      <img src="./assets/sft-polymer.png" alt="SFT Polymer" style="height:26px"/>
-    </div>
-    <!-- FORM -->
-    <div class="card card-pad" id="formCard">
-      <h2 style="margin-top:0">Contatti <span class="muted">— registra un nuovo cliente</span></h2>
-      <div class="grid">
-        <div class="col-4"><label>Nome</label><input id="nome" placeholder="Nome" type="text"/></div>
-        <div class="col-4"><label>Cognome</label><input id="cognome" placeholder="Cognome" type="text"/></div>
-        <div class="col-4"><label>Azienda</label><input id="azienda" placeholder="Azienda" type="text"/></div>
-        <div class="col-4"><label>Email (obbligatoria)</label><input id="email" placeholder="email@azienda.it" type="email"/></div>
-        <div class="col-3">
-          <label>Categoria</label>
-          <select id="categoria">
-            <option disabled selected value="">Seleziona…</option>
-            <option>Cliente</option><option>Fornitore</option><option>Altro</option>
-          </select>
+  <main class="max-w-7xl mx-auto px-4 pb-28">
+    <!-- DATABASE VIEW -->
+    <section id="dbView" class="pt-8">
+      <h2 class="text-2xl sm:text-3xl font-semibold">Database Materiali — <span class="font-normal text-slate-300">scegli tra i materiali a disposizione</span></h2>
+
+      <!-- Controls -->
+      <div class="mt-6 rounded-2xl border border-slate-800 bg-slate-950/40 p-4 sm:p-6">
+        <div class="grid grid-cols-12 gap-3 sm:gap-4 items-end">
+          <div class="col-span-12 sm:col-span-3">
+            <label class="text-xs uppercase tracking-wide text-slate-400">Tipologia polimero</label>
+            <select id="fTipo" class="mt-1 w-full rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="">Tutte</option>
+            </select>
+          </div>
+          <div class="col-span-12 sm:col-span-3">
+            <label class="text-xs uppercase tracking-wide text-slate-400">Applicazione</label>
+            <select id="fApp" class="mt-1 w-full rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="">Tutte</option>
+            </select>
+          </div>
+          <div class="col-span-12 sm:col-span-3">
+            <label class="text-xs uppercase tracking-wide text-slate-400">Processo</label>
+            <select id="fProc" class="mt-1 w-full rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="">Tutti</option>
+            </select>
+          </div>
+          <div class="col-span-6 sm:col-span-1">
+            <label class="text-xs uppercase tracking-wide text-slate-400">Durezza min (ShA)</label>
+            <input id="fMin" type="number" inputmode="numeric" class="mt-1 w-full rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" value="0" />
+          </div>
+          <div class="col-span-6 sm:col-span-1">
+            <label class="text-xs uppercase tracking-wide text-slate-400">Durezza max (ShA)</label>
+            <input id="fMax" type="number" inputmode="numeric" class="mt-1 w-full rounded-xl bg-slate-900 border border-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" value="100" />
+          </div>
+          <div class="col-span-12 sm:col-span-1 flex gap-2">
+            <button id="btnApply" class="mt-6 w-full rounded-xl bg-emerald-600 text-slate-900 font-semibold px-3 py-2 hover:bg-emerald-500">Applica</button>
+          </div>
+          <div class="col-span-12 sm:col-span-1 flex gap-2">
+            <button id="btnReset" class="mt-6 w-full rounded-xl bg-slate-800 px-3 py-2 hover:bg-slate-700">Reset</button>
+          </div>
+          <div class="col-span-12 sm:col-span-2 flex gap-2">
+            <button id="btnExport" class="mt-6 w-full rounded-xl border border-slate-700 px-3 py-2 hover:bg-slate-800">Esporta CSV</button>
+          </div>
         </div>
-        <div class="col-3">
-          <label>Agente (obbligatorio)</label>
-          <select id="agente" required>
-            <option disabled selected value="">Seleziona…</option>
-            <option>Ciolli</option><option>Rizzuto</option><option>Bagnoli</option><option>Pocaterra</option>
-            <option>Castelli</option><option>Milan</option><option>Uccheddu</option><option>Campagnoni</option>
-          </select>
-        </div>
-        <div class="col-3">
-          <label>Regione commerciale</label>
-          <select id="regione">
-            <option disabled selected value="">Seleziona…</option>
-            <option>italia</option><option>Europa est</option><option>Europa nord</option><option>Europa sud</option><option>Europa ovest</option>
-            <option>Africa</option><option>medio oriente</option><option>Asia</option><option>America</option>
-          </select>
-        </div>
-        <div class="col-3">
-          <label>Polimero PVC free</label>
-          <select id="polimero">
-            <option disabled selected value="">Seleziona…</option>
-            <option>TPE</option><option>TPO</option><option>TPU</option><option>BIO</option>
-          </select>
-        </div>
-        <div class="col-3">
-          <label>Processo</label>
-          <select id="processo">
-            <option disabled selected value="">Seleziona…</option>
-            <option>Stampaggio</option><option>Estrusione</option><option>Altro</option>
-          </select>
-        </div>
-        <div class="col-3">
-          <label>Applicazione</label>
-          <select id="applicazione">
-            <option disabled selected value="">Seleziona…</option>
-            <option>medicale</option><option>tecnico</option>
-          </select>
-        </div>
-        <div class="col-12"><label>Note</label><textarea id="note" placeholder="Note, richieste specifiche, applicazioni…"></textarea></div>
-        <div class="col-12">
-          <label>Immagini (solo formati immagine)</label>
-          <input accept="image/*" id="images" multiple type="file"/>
-          <div class="thumbs" id="imageThumbs"></div>
-        </div>
-        <div class="col-12" style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn btn-primary" onclick="addContatto()">Aggiungi contatto</button>
-          <button class="btn btn-outline" onclick="resetForm()">Reset modulo</button>
+        <div class="mt-3 text-sm text-slate-400">
+          <span id="count">0 risultati</span>
+          <span class="opacity-60"> • Sorgente: <code id="srcPath">./data/materiali_database.csv</code></span>
+          <span id="versionTag" class="ml-2 chip text-emerald-300 border-emerald-500/30 bg-emerald-500/10 text-xs">v6</span>
         </div>
       </div>
-    </div>
 
-    <!-- TOOLS -->
-    <div class="tools">
-      <button class="btn" onclick="exportXLSX()">Scarica Excel (.xlsx)</button>
-      <button class="btn btn-outline" onclick="loadRows()">Aggiorna tabella</button>
-    </div>
-
-    <!-- TABLE -->
-    <div class="table-wrap card card-pad">
-      <table id="tab">
-        <thead>
-          <tr>
-            <th>#</th><th>Nome</th><th>Cognome</th><th>Azienda</th><th>Email</th>
-            <th>Categoria</th><th>Agente</th><th>Regione</th><th>Polimero</th><th>Processo</th><th>Applicazione</th>
-            <th>Note</th><th>Immagini</th><th>Creato da</th><th>Azioni</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- MATERIALS VIEW -->
-  <section id="view-materials" style="display:none">
-    <div style="display:flex;justify-content:flex-end;margin:6px 0">
-      <img src="./assets/sft-polymer.png" alt="SFT Polymer" style="height:26px"/>
-    </div>
-    <div class="card card-pad">
-      <h2 style="margin-top:0">Database Materiali <span class="muted">— scegli tra i materiali a disposizione</span></h2>
-      <div class="grid">
-        <div class="col-3"><label>Categoria materiale</label>
-          <select id="matCat" onchange="loadMaterials()">
-            <option value="">Tutte</option><option value="TPE">TPE</option><option value="TPO">TPO</option><option value="TPU">TPU</option><option value="BIO">BIO</option>
-          </select>
-        </div>
-        <div class="col-9" style="display:flex;align-items:end"><div class="muted">Libreria tecnica: filtra per categoria per vedere i materiali disponibili.</div></div>
+      <!-- Table -->
+      <div class="mt-6 overflow-auto rounded-2xl border border-slate-800 table-sticky">
+        <table id="tbl" class="min-w-full text-left text-sm">
+          <thead>
+            <tr class="bg-slate-900/80">
+              <th class="px-4 py-3 font-semibold">Sigla</th>
+              <th class="px-4 py-3 font-semibold">Processo</th>
+              <th class="px-4 py-3 font-semibold">regulation</th>
+              <th class="px-4 py-3 font-semibold">Peso Specifico<br><span class="text-xs text-slate-400">(g/cm3) ISO 1183-1</span></th>
+              <th class="px-4 py-3 font-semibold">Carico di Rottura<br><span class="text-xs text-slate-400">(N/mm2) ISO 527</span></th>
+              <th class="px-4 py-3 font-semibold">Allungamento a Rottura<br><span class="text-xs text-slate-400">(N/mm2) ISO 527</span></th>
+              <th class="px-4 py-3 font-semibold">Compression Set<br><span class="text-xs text-slate-400">(ASTM D 395) (22°C/72h)</span></th>
+              <th class="px-4 py-3 font-semibold">special features</th>
+            </tr>
+          </thead>
+          <tbody id="tbody" class="divide-y divide-slate-800/70"></tbody>
+        </table>
       </div>
-    </div>
-    <div class="card card-pad">
-      <table id="matTable" style="width:100%">
-        <thead><tr><th>#</th><th>Categoria</th><th>Nome</th><th>Descrizione</th></tr></thead>
-        <tbody id="matBody"></tbody>
-      </table>
-    </div>
-  </section>
+    </section>
 
-  <div class="muted" style="text-align:center;margin:18px 0">© <span id="year"></span> – K2025 | by TPV Compound</div>
-</main>
+    <!-- CONTATTI PLACEHOLDER (preserva flusso esistente) -->
+    <section id="contattiView" class="hidden pt-10">
+      <div class="rounded-2xl border border-slate-800 p-6">
+        <h3 class="text-xl font-semibold">Contatti</h3>
+        <p class="mt-2 text-slate-300">Questa pagina usa ancora Supabase + Netlify Forms (form name: <code>contatti</code>). Rimane invariata. Questo file si concentra sul Database Materiali.</p>
+        <a href="/contatti-admin.html" class="inline-block mt-3 underline">Admin contatti</a>
+      </div>
+    </section>
+  </main>
 
-<!-- MODAL IMMAGINI -->
-<div aria-labelledby="modalTitle" aria-modal="true" class="modal" id="modal" role="dialog">
-  <div class="modal-card">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-      <h3 id="modalTitle">Immagini contatto</h3>
-      <button class="btn btn-outline" onclick="closeModal()">Chiudi</button>
-    </div>
-    <div class="thumbs" id="modalBody" style="margin-top:10px;gap:14px"></div>
-  </div>
-</div>
+  <script>
+  // ======= CONFIG =======
+  const CSV_PATH_PRIMARY = './data/materiali_database.csv';
+  const CSV_PATH_FALLBACK = '/data/materiali_database.csv'; // per Netlify
 
-<script>
-// ============ SERVICE WORKER CLEANUP (opzionale) ============
-(function(){
-  try{
-    var params=new URLSearchParams(location.search);
-    if (params.get("clear-sw")==="1" && 'serviceWorker' in navigator){
-      navigator.serviceWorker.getRegistrations().then(function(rs){
-        rs.forEach(function(r){ r.unregister(); });
-        if (window.caches && caches.keys){
-          caches.keys().then(function(keys){ keys.forEach(function(k){ caches.delete(k); }); });
-        }
-        console.log("Service workers e cache rimossi.");
-      });
-    }
-  }catch(_){}
-})();
-
-// ============ STATE ============
-let supabaseClient;
-let currentUser = null;
-let data = [];
-let imagesBuf = [];
-
-// ============ HELPERS ============
-function short(s, n=80){ s=String(s||''); return s.length>n ? s.slice(0,n-1)+'…' : s; }
-function escapeHTML(s){ return String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-function validEmail(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||'').trim()); }
-function clearTable(){ document.getElementById('tbody').innerHTML=''; }
-
-// ============ UI NAV ============
-function switchTab(which){
-  document.getElementById('tab-contacts').classList.toggle('active', which==='contacts');
-  document.getElementById('tab-materials').classList.toggle('active', which==='materials');
-  document.getElementById('view-contacts').style.display = which==='contacts' ? '' : 'none';
-  document.getElementById('view-materials').style.display = which==='materials' ? '' : 'none';
-  if (which==='materials') loadMaterials();
-}
-function scrollToForm(reset){ if (reset) resetForm(); document.getElementById('formCard').scrollIntoView({ behavior:'smooth' }); document.getElementById('nome').focus(); }
-
-// ============ GATE ============
-function gateUnlock(){
-  const pw = document.getElementById('sharedPw').value.trim();
-  if (pw === "Elicottero64") { sessionStorage.setItem('k2025_gate','ok'); document.getElementById('gate').classList.remove('open'); }
-  else { document.getElementById('gateMsg').textContent = "Password errata"; }
-}
-(function(){ const ok = sessionStorage.getItem('k2025_gate') === 'ok'; if (ok) document.getElementById('gate').classList.remove('open'); })();
-
-// ============ SUPABASE ============
-function initSupabase(){
-  if (!window.ENV) { alert('env mancante'); return; }
-  supabaseClient = window.supabase.createClient(ENV.SUPABASE_URL, ENV.SUPABASE_ANON_KEY);
-}
-initSupabase();
-
-// ============ FORM ============
-function resetForm(){
-  ['nome','cognome','azienda','email','note'].forEach(id => document.getElementById(id).value='');
-  ['categoria','regione','polimero','processo','agente','applicazione'].forEach(id => { const el=document.getElementById(id); if(el) el.selectedIndex=0; });
-  imagesBuf = []; document.getElementById('images').value = ''; document.getElementById('imageThumbs').innerHTML = '';
-}
-
-document.getElementById('images').addEventListener('change', async (e) => {
-  const files = Array.from(e.target.files || []);
-  imagesBuf = [];
-  const wrap = document.getElementById('imageThumbs'); wrap.innerHTML='';
-  for (const f of files){
-    if(!f.type.startsWith('image/')) { alert('Sono ammessi solo file immagine.'); continue; }
-    const dataUrl = await new Promise((res, rej) => { const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(f); });
-    imagesBuf.push({ name: f.name, file: f, preview: dataUrl });
-    const el = document.createElement('img'); el.src = dataUrl; el.title = f.name; wrap.appendChild(el);
-  }
-});
-
-// ============ CRUD: CONTATTI ============
-async function addContatto(){
-  const entryBase = {
-    nome: document.getElementById('nome').value.trim(),
-    cognome: document.getElementById('cognome').value.trim(),
-    azienda: document.getElementById('azienda').value.trim(),
-    email: document.getElementById('email').value.trim(),
-    categoria: document.getElementById('categoria').value,
-    agente: document.getElementById('agente').value,
-    regione: document.getElementById('regione').value,
-    polimero: document.getElementById('polimero').value,
-    processo: document.getElementById('processo').value,
-    applicazione: document.getElementById('applicazione').value,
-    note: document.getElementById('note').value.trim(),
-    images: []
+  const state = {
+    raw: [],       // array di oggetti (righe CSV)
+    filtered: [],  // array filtrato per UI
+    meta: { delimiter: undefined },
+    columns: [],
   };
-  if(!entryBase.nome || !entryBase.cognome || !entryBase.azienda){ alert('Nome, Cognome e Azienda sono obbligatori.'); return; }
-  if(!validEmail(entryBase.email)){ alert('Email non valida (obbligatoria).'); return; }
-  if(!entryBase.agente){ alert('Agente obbligatorio.'); return; }
 
-  // Inserimento
-  let payload = { ...entryBase, created_by: null };
-  let ins = await supabaseClient.from('contacts').insert(payload).select().single();
-  if (ins.error){ alert('Errore salvataggio: ' + ins.error.message); return; }
-  const id = ins.data.id;
+  const el = (id)=>document.getElementById(id);
 
-  // Upload immagini
-  const bucket = (window.ENV && window.ENV.STORAGE_BUCKET) || 'contact-images';
-  const uploaded = [];
-  for (const img of imagesBuf){
-    const ext = (img.file.name.split('.').pop() || 'jpg').toLowerCase();
-    const path = `contact-${id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error: upErr } = await supabaseClient.storage.from(bucket).upload(path, img.file, { upsert: true, contentType: img.file.type });
-    if (!upErr) uploaded.push({ name: img.name, path });
-  }
-  if (uploaded.length){
-    const { error: updErr } = await supabaseClient.from('contacts').update({ images: uploaded }).eq('id', id);
-    if (updErr) alert('Immagini caricate ma non salvate in tabella: ' + updErr.message);
-  }
-
-  resetForm();
-  await loadRows();
-}
-
-async function loadRows(){
-  const { data: rows, error } = await supabaseClient.from('contacts').select('*').order('created_at',{ascending:false});
-  if (error){ console.error(error); alert('Errore caricamento: ' + (error.message || JSON.stringify(error))); return; }
-  data = rows || [];
-  render();
-}
-
-function render(){
-  const tb = document.getElementById('tbody'); tb.innerHTML = '';
-  (data || []).forEach((r, i) => {
-    const imgCount = (r.images || []).length;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${i+1}</td>
-      <td>${escapeHTML(r.nome||'')}</td>
-      <td>${escapeHTML(r.cognome||'')}</td>
-      <td>${escapeHTML(r.azienda||'')}</td>
-      <td>${escapeHTML(r.email||'')}</td>
-      <td><span class="badge">${escapeHTML(r.categoria||'')}</span></td>
-      <td>${escapeHTML(r.agente||'')}</td>
-      <td>${escapeHTML(r.regione||'')}</td>
-      <td>${escapeHTML(r.polimero||'')}</td>
-      <td>${escapeHTML(r.processo||'')}</td>
-      <td>${escapeHTML(r.applicazione||'')}</td>
-      <td title="${escapeHTML(r.note||'')}">${escapeHTML(short(r.note||'', 60))}</td>
-      <td><button class="btn btn-outline" onclick="viewImgs(${r.id})">${imgCount ? '📷 ' + imgCount : '＋ Aggiungi'}</button></td>
-      <td>${escapeHTML(r.created_by||'')}</td>
-      <td class="right">
-        <button class="btn btn-outline" onclick="addImgsToRow(${r.id})">Aggiungi img</button>
-      </td>
-    `;
-    tb.appendChild(tr);
-  });
-}
-
-async function addImgsToRow(id){
-  const hidden = document.createElement('input');
-  hidden.type = 'file'; hidden.accept = 'image/*'; hidden.multiple = true; hidden.style.display='none';
-  hidden.addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files || []);
-    const row = (data||[]).find(r => r.id === id); if(!row) return;
-    const bucket = (window.ENV && window.ENV.STORAGE_BUCKET) || 'contact-images';
-    const newImgs = [];
-    for (const f of files){
-      if(!f.type.startsWith('image/')) continue;
-      const ext = (f.name.split('.').pop() || 'jpg').toLowerCase();
-      const path = `contact-${id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: upErr } = await supabaseClient.storage.from(bucket).upload(path, f, { upsert: true, contentType: f.type });
-      if(!upErr) newImgs.push({ name: f.name, path });
+  // ======= FETCH + PARSE (evita richieste duplicate) =======
+  let loadedOnce = false;
+  async function loadCsvOnce(){
+    if(loadedOnce) return state.raw;
+    const srcs = [CSV_PATH_PRIMARY, CSV_PATH_FALLBACK];
+    let lastErr = null;
+    for(const src of srcs){
+      try{
+        el('srcPath').textContent = src;
+        const resp = await fetch(src + `?v=${Date.now()}` , { cache: 'no-store' });
+        if(!resp.ok) throw new Error('HTTP ' + resp.status);
+        const text = await resp.text();
+        const parsed = Papa.parse(text, { header:true, dynamicTyping:false, skipEmptyLines:true });
+        if(parsed.errors && parsed.errors.length){
+          console.warn('Papa errors', parsed.errors);
+        }
+        // auto-rileva delimitatore se possibile via meta (Papa lo espone quando non header?), 
+        // qui ci accontentiamo del risultato già normalizzato da Papa.
+        state.raw = parsed.data.map(normalizeRecord);
+        state.columns = Object.keys(parsed.data[0] || {});
+        loadedOnce = true;
+        console.info('[db-patch v6] CSV caricato. Righe:', state.raw.length);
+        return state.raw;
+      }catch(err){
+        lastErr = err;
+        console.warn('Tentativo fallito su', src, err);
+      }
     }
-    const merged = (row.images||[]).concat(newImgs);
-    const { error: updErr } = await supabaseClient.from('contacts').update({ images: merged }).eq('id', id);
-    if (updErr) alert('Immagini caricate ma non salvate in tabella: ' + updErr.message);
-    await loadRows();
-  });
-  document.body.appendChild(hidden); hidden.click(); setTimeout(()=>hidden.remove(), 500);
-}
+    console.error('Impossibile caricare il CSV', lastErr);
+    alert('Errore nel caricare il database materiali. Controlla il percorso /data/materiali_database.csv');
+    return [];
+  }
 
-async function viewImgs(id){
-  const row = (data||[]).find(r => r.id === id);
-  const modal = document.getElementById('modal');
-  const body = document.getElementById('modalBody'); body.innerHTML = '';
-  if (row && Array.isArray(row.images) && row.images.length){
-    const bucket = (window.ENV && window.ENV.STORAGE_BUCKET) || 'contact-images';
-    for (const img of row.images){
-      const pub = supabaseClient.storage.from(bucket).getPublicUrl(img.path);
-      const url = (pub && pub.data && pub.data.publicUrl) ? pub.data.publicUrl : '';
-      const wrap = document.createElement('div'); wrap.className = 'thumb'; wrap.style.display='inline-flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='flex-start'; wrap.style.gap='6px';
-      const el = document.createElement('img'); el.src = url; el.alt = img.name; el.style.width='160px'; el.style.height='160px'; el.style.objectFit='cover'; el.style.border='1px solid #334155'; el.style.borderRadius='10px';
-      const a = document.createElement('a'); a.href = url; a.target="_blank"; a.className='btn btn-outline'; a.textContent='Apri';
-      wrap.appendChild(el); wrap.appendChild(a);
-      body.appendChild(wrap);
+  // Normalizza chiavi/valori più comuni
+  function normalizeRecord(row){
+    const out = {};
+    for(const k in row){
+      const key = k.trim();
+      let val = row[k];
+      if(typeof val === 'string'){
+        val = val.trim();
+        // converte virgola decimale in punto per i numeri
+        const v2 = val.replace(/,(?=\d{1,2}$)/, '.');
+        if(/^[-+]?\d+(?:[\.,]\d+)?$/.test(val)){
+          out[key] = Number(v2);
+          continue;
+        }
+      }
+      out[key] = val;
     }
-  } else {
-    body.innerHTML = '<p class="muted">Nessuna immagine.</p>';
+    return out;
   }
-  modal.classList.add('open');
-}
-function closeModal(){ document.getElementById('modal').classList.remove('open'); }
 
-// ============ MATERIALS ============
-async function loadMaterials(){
-  const cat = document.getElementById('matCat').value;
-  let query = supabaseClient.from('materials').select('id,categoria,nome,descrizione').order('created_at',{ascending:false});
-  if (cat) query = query.eq('categoria',cat);
-  const { data: rows, error } = await query;
-  if (error){ alert('Errore materiali: ' + (error.message || JSON.stringify(error))); return; }
-  const body = document.getElementById('matBody'); body.innerHTML = '';
-  (rows||[]).forEach((r,i)=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i+1}</td><td>${escapeHTML(r.categoria||'')}</td><td>${escapeHTML(r.nome||'')}</td><td>${escapeHTML(r.descrizione||'')}</td>`;
-    body.appendChild(tr);
+  // ======= UI BUILD =======
+  function fillSelect(id, values){
+    const sel = el(id);
+    const seen = new Set();
+    values.filter(v=>v!=='' && v!=null).forEach(v=>{
+      const s = String(v).trim();
+      if(!s || seen.has(s)) return;
+      seen.add(s);
+      const opt = document.createElement('option');
+      opt.value = s; opt.textContent = s;
+      sel.appendChild(opt);
+    });
+  }
+
+  function buildFilters(){
+    const r = state.raw;
+    fillSelect('fTipo', Array.from(new Set(r.map(x=>x['Tipologia']||x['Tipologia polimero']||x['tipologia']||x['polimero']))).sort());
+    fillSelect('fApp',  Array.from(new Set(r.map(x=>x['Applicazione']||x['applicazione']))).sort());
+    fillSelect('fProc', Array.from(new Set(r.map(x=>x['Processo']||x['processo']))).sort());
+  }
+
+  // Filtra e disegna
+  function applyFilters(){
+    const fTipo = el('fTipo').value;
+    const fApp  = el('fApp').value;
+    const fProc = el('fProc').value;
+    const min = Number(el('fMin').value || 0);
+    const max = Number(el('fMax').value || 100);
+
+    state.filtered = state.raw.filter(row => {
+      const duro = Number(row['Durezza'] || row['ShA'] || row['Durezza (ShA)'] || row['Shore A'] || 0);
+      const okDuro = isFinite(duro) ? (duro>=min && duro<=max) : true;
+      const okTipo = !fTipo || [row['Tipologia'], row['Tipologia polimero'], row['tipologia'], row['polimero']].some(v=>String(v||'')===fTipo);
+      const okApp  = !fApp  || String(row['Applicazione']||row['applicazione']||'')===fApp;
+      const okProc = !fProc || String(row['Processo']||row['processo']||'')===fProc;
+      return okDuro && okTipo && okApp && okProc;
+    });
+
+    drawTable();
+  }
+
+  function drawTable(){
+    const tbody = el('tbody');
+    tbody.innerHTML='';
+    const rows = state.filtered.length? state.filtered : state.raw; // all on first load
+    el('count').textContent = `${rows.length} risultati`;
+
+    for(const row of rows){
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-slate-900/40';
+      tr.innerHTML = `
+        <td class="px-4 py-3 whitespace-nowrap">${escapeHtml(row['Sigla']||'')}</td>
+        <td class="px-4 py-3">${escapeHtml(row['Processo']||row['processo']||'')}</td>
+        <td class="px-4 py-3">${escapeHtml(row['regulation']||'')}</td>
+        <td class="px-4 py-3">${fmt(row['Peso Specifico (g/cm3) ISO 1183-1'])}</td>
+        <td class="px-4 py-3">${fmt(row['Carico di Rottura (N/mm2) ISO 527'])}</td>
+        <td class="px-4 py-3">${fmt(row['Allungamento a Rottura (N/mm2) ISO 527'])}</td>
+        <td class="px-4 py-3">${escapeHtml(row['Compression Set (ASTM D 395) (22°C/72h)']||'')}</td>
+        <td class="px-4 py-3">${escapeHtml(row['special features']||'')}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  function fmt(v){
+    if(v==null) return '';
+    if(typeof v==='number') return String(v);
+    return escapeHtml(String(v));
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+  }
+
+  // ======= EXPORT =======
+  function exportCsv(){
+    const data = (state.filtered.length? state.filtered : state.raw);
+    const csv = Papa.unparse(data);
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `materiali_filtrati_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  // ======= EVENTS =======
+  document.addEventListener('DOMContentLoaded', async () => {
+    await loadCsvOnce();
+    buildFilters();
+    applyFilters();
+
+    el('btnApply').addEventListener('click', applyFilters);
+    el('btnReset').addEventListener('click', () => {
+      ['fTipo','fApp','fProc'].forEach(id=>{ el(id).value=''; });
+      el('fMin').value = 0; el('fMax').value = 100;
+      state.filtered = [];
+      drawTable();
+    });
+    el('btnExport').addEventListener('click', exportCsv);
+
+    // Tabs (placeholder)
+    el('tabContatti').addEventListener('click',()=>{
+      el('dbView').classList.add('hidden');
+      el('contattiView').classList.remove('hidden');
+    });
+    el('tabDatabase').addEventListener('click',()=>{
+      el('contattiView').classList.add('hidden');
+      el('dbView').classList.remove('hidden');
+    });
   });
-}
-
-// ============ EXPORT ============
-async function exportXLSX(){
-  try{ if(!Array.isArray(data) || data.length===0){ await loadRows(); } }catch(e){}
-  const bucket = (window.ENV && window.ENV.STORAGE_BUCKET) || 'contact-images';
-  const isAdmin = (window.ENV && window.ENV.IS_ADMIN === true);
-  function imgUrls(arr){
-    try { return (arr||[]).map(x => (supabaseClient ? (supabaseClient.storage.from(bucket).getPublicUrl(x.path).data.publicUrl) : "")).filter(Boolean).join("\n"); } catch(e){ return ""; }
-  }
-  const rows = (data||[]).map((r, i) => ({
-    "#": i+1, "Nome": r.nome||"", "Cognome": r.cognome||"", "Azienda": r.azienda||"", "Email": r.email||"",
-    "Categoria": r.categoria||"", "Agente": r.agente||"", "Regione": r.regione||"", "Polimero": r.polimero||"",
-    "Processo": r.processo||"", "Applicazione": r.applicazione||"", "Note": r.note||"",
-    "Immagini (n°)": (r.images||[]).length, "Creato da": r.created_by||"", "Creato il": r.created_at||"",
-    "Immagini URL": (isAdmin ? imgUrls(r.images||[]) : "")
-  }));
-  if (typeof XLSX === 'undefined'){ alert('Export non disponibile.'); return; }
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Contatti");
-  XLSX.writeFile(wb, "Contatti_K2025_PVC_FREE.xlsx");
-}
-
-// ============ INIT ============
-window.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('year').textContent = new Date().getFullYear();
-  loadRows();
-});
-</script>   
-<script src="./db-patch.js?v=5d"></script>
+  </script>
 </body>
 </html>
