@@ -16,6 +16,17 @@ window.ENV = {
   IS_ADMIN: true // per includere "Immagini URL" nell'Excel
 };
 </script>
+<script>
+// Sblocco gate in produzione / o con parametro ?unlock=1
+(function(){
+  try{
+    var p = new URLSearchParams(location.search);
+    if (p.get('unlock') === '1' || location.hostname.endsWith('.netlify.app')){
+      sessionStorage.setItem('k2025_gate','ok');
+    }
+  }catch(e){}
+})();
+</script>
 <style>
   :root { --bg:#0f172a; --card:#0b1220; --muted:#94a3b8; --accent:#22c55e; --ring:#38bdf8; --text:#e5e7eb; --border:#1f2937; }
   *{box-sizing:border-box} body{margin:0;background:radial-gradient(1200px 1200px at 20% -5%, #0ea5e910, transparent 60%),radial-gradient(1400px 1400px at 120% 10%, #22c55e10, transparent 50%),var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;min-height:100vh}
